@@ -1,0 +1,100 @@
+import { lazy, Suspense, useEffect, useRef } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import Sidebar from './components/Sidebar';
+import TopBar from './components/TopBar';
+import PlayerBar from './components/PlayerBar';
+import QueuePanel from './components/QueuePanel';
+import LyricsPanel from './components/LyricsPanel';
+import YouTubeHost from './components/YouTubeHost';
+import HomePage from './pages/HomePage';
+import SearchPage from './pages/SearchPage';
+import LibraryPage from './pages/LibraryPage';
+import HistoryPage from './pages/HistoryPage';
+import { PlaylistsPage, PlaylistDetailPage } from './pages/PlaylistsPage';
+import DownloadsPage from './pages/DownloadsPage';
+import SettingsPage from './pages/SettingsPage';
+import { ToastProvider } from './context/ToastContext';
+import { LibraryProvider } from './context/LibraryContext';
+import { PlayerProvider } from './context/PlayerContext';
+import { UIProvider, useUI } from './context/UIContext';
+import { PomodoroController } from './focus/PomodoroController';
+import { SearchHistoryProvider } from './search/SearchHistoryContext';
+import { DisplayModeProvider, useDisplayMode } from './context/DisplayModeContext';
+import CarSuggestionBanner from './components/CarSuggestionBanner';
+import CarPlayerBar from './components/CarPlayerBar';
+import NowPlaying from './components/NowPlaying';
+import { ListeningStoreProvider } from './recommend/ListeningStore';
+import { RecommendationProvider } from './recommend/RecommendationProvider';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+
+const FocusModePage = lazy(() => import('./focus/components/FocusModePage'));
+
+/** The normal AmberTube layout (sidebar, search, pages, player bar). */
+function Shell() {
+  const { pathname } = useLocation();
+  const { panel } = useUI();
+  const { mode, compact } = useDisplayMode();
+  const scroller = useRef<HTMLDivElement>(null);
+  useKeyboardShortcuts();
+
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 });
+  }, [pathname]);
+
+  return (
+    <div className={`app app--${mode}${compact ? ' app--compact' : ''}`}>
+      {!compact && <Sidebar />}
+      <main className={`main${panel ? ` has-panel has-panel--${panel}` : ''}`}>
+        <TopBar />
+        <CarSuggestionBanner />
+        <div className="main__scroll" ref={scroller}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/library" element={<LibraryPage />} />
+            <Route path="/playlists" element={<PlaylistsPage />} />
+            <Route path="/playlists/:id" element={<PlaylistDetailPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/downloads" element={<DownloadsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+        <QueuePanel />
+        <LyricsPanel />
+      </main>
+      {compact ? <CarPlayerBar /> : <PlayerBar />}
+      {compact && <NowPlaying />}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <DisplayModeProvider>
+      <SearchHistoryProvider>
+      <LibraryProvider>
+      <ListeningStoreProvider>
+        <PlayerProvider>
+        <RecommendationProvider>
+          <UIProvider>
+            <PomodoroController>
+              <Routes>
+                {/* Focus mode replaces the whole layout but shares the same player, queue and timer */}
+                <Route path="/focus" element={<Suspense fallback={<div className="fm fm--loading" />}><FocusModePage /></Suspense>} />
+                <Route path="/*" element={<Shell />} />
+              </Routes>
+              {/* outside the routes so the YouTube iframe survives switching layouts */}
+              <YouTubeHost />
+            </PomodoroController>
+          </UIProvider>
+        </RecommendationProvider>
+        </PlayerProvider>
+      </ListeningStoreProvider>
+      </LibraryProvider>
+      </SearchHistoryProvider>
+      </DisplayModeProvider>
+    </ToastProvider>
+  );
+}
