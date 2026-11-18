@@ -33,3 +33,14 @@
 @media (max-height: 560px), (max-width: 420px) {
   .fm { overflow-y: auto; grid-template-rows: auto auto auto; }
 }
+
+/* device-testing diagnostics panel (?diag=1) */
+.diag { position: fixed; left: 8px; bottom: calc(var(--player-h) + 8px); z-index: 200; width: min(560px, calc(100vw - 16px)); max-height: 45vh; display: flex; flex-direction: column;
+  background: rgba(12, 10, 8, 0.94); border: 1px solid var(--border); border-radius: 10px; font: 11px/1.4 ui-monospace, monospace; color: #E8E3DB; }
+.diag--min { max-height: none; }
+.diag__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border-soft); }
+.diag__bar span { flex: 1; min-width: 160px; color: var(--accent); }
+.diag__bar button { min-height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; }
+.diag__list { margin: 0; padding: 6px 8px; overflow: auto; list-style: none; }
+.diag__list time { color: var(--text-3); }
+.app--compact ~ .diag, .mode-car .diag { bottom: calc(var(--car-player-h) + 8px); }

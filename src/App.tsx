@@ -28,8 +28,11 @@ import NowPlaying from './components/NowPlaying';
 import { ListeningStoreProvider } from './recommend/ListeningStore';
 import { RecommendationProvider } from './recommend/RecommendationProvider';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { diagEnabled } from './diag/audioDiag';
 
 const FocusModePage = lazy(() => import('./focus/components/FocusModePage'));
+// device-testing diagnostics, only loaded with ?diag=1
+const DiagPanel = lazy(() => import('./diag/DiagPanel'));
 
 /** The normal AmberTube layout (sidebar, search, pages, player bar). */
 function Shell() {
@@ -91,6 +94,7 @@ export default function App() {
               </Routes>
               {/* outside the routes so the YouTube iframe survives switching layouts */}
               <YouTubeHost />
+              {diagEnabled() && <Suspense fallback={null}><DiagPanel /></Suspense>}
             </PomodoroController>
           </UIProvider>
         </RecommendationProvider>

@@ -10,7 +10,7 @@ const { chromium } = require('playwright');
   const ctx = await b.newContext({ viewport: { width: 1280, height: 800 } });
   await ctx.addInitScript(() => {
     window.__log = []; window.__recs = [];
-    navigator.audioSession = { _t: 'auto', get type() { return this._t; }, set type(v) { this._t = v; window.__log.push('session:' + v); } };
+    navigator.audioSession = { _t: 'auto', get type() { return this._t; }, set type(v) { this._t = v; window.__firstSession ??= v; window.__log.push('session:' + v); } };
     class FakeRec {
       constructor() { this.active = false; window.__recs.push(this); }
       start() { this.active = true; window.__log.push('start'); setTimeout(() => this.onstart && this.onstart(), 10); }
@@ -31,6 +31,14 @@ const { chromium } = require('playwright');
   check('music is playing before voice search', await playing());
   const time0 = await p.textContent('.player__title');
 
+  // 0) typing a search (no voice) never touches playback
+  await p.fill('.searchbar__input', 'acoustic'); await p.waitForTimeout(400);
+  await p.keyboard.press('Enter'); await p.waitForSelector('.video-row:not(.video-row--skeleton)'); await p.waitForTimeout(600);
+  check('keyboard search: music keeps playing', await playing() && (await p.textContent('.player__title')) === time0);
+  await p.click('.searchbar__input'); await p.keyboard.type('lofi', { delay: 40 }); await p.waitForTimeout(500); await p.keyboard.press('Escape');
+  check('typing in the search box / suggestions: music keeps playing', await playing());
+  check('keyboard search never opens the microphone', (await p.evaluate(() => window.__recs.length)) === 0);
+
   // 1) success
   await p.click('.searchbar__mic'); await p.waitForTimeout(100);
   check('music pauses as voice search starts', !(await playing()));
@@ -38,7 +46,8 @@ const { chromium } = require('playwright');
   await p.waitForTimeout(200);
   let st = await p.evaluate(() => ({ log: window.__log.join(','), active: window.__recs.at(-1).active, handlers: !!window.__recs.at(-1).onresult, session: navigator.audioSession.type }));
   check('success: recognition ended (mic released) and handlers detached', !st.active && !st.handlers && /abort/.test(st.log), st.log);
-  check('success: audio session handed back to playback → auto', /session:playback,session:auto$/.test(st.log) && st.session === 'auto', st.log);
+  check('music already on the playback session before voice', (await p.evaluate(() => window.__firstSession)) === 'playback');
+  check('success: session = play-and-record while listening, back to playback after (stays)', /session:play-and-record,start.*abort,session:playback$/.test(st.log) && st.session === 'playback', st.log);
   check('success: transcript in the search box', (await p.inputValue('.searchbar__input')) === 'lofi chill');
   check('music stays paused after recognition', !(await playing()));
   await p.waitForTimeout(3000);
@@ -49,7 +58,7 @@ const { chromium } = require('playwright');
   await p.click('.searchbar__mic'); await p.waitForTimeout(80);
   await p.evaluate(() => window.__recs.at(-1).fail('not-allowed')); await p.waitForTimeout(150);
   st = await p.evaluate(() => ({ log: window.__log.join(','), active: window.__recs.at(-1).active }));
-  check('permission denied: mic released + session restored', !st.active && /session:auto$/.test(st.log), st.log);
+  check('permission denied: mic released + session back to playback', !st.active && /session:play-and-record.*session:playback$/.test(st.log), st.log);
   check('permission denied: message shown', /micro/.test(await p.textContent('.toast-stack')));
 
   // 3) user cancel (tap mic again) → stop, then forced abort after the grace period
@@ -74,7 +83,7 @@ const { chromium } = require('playwright');
   await p.evaluate(() => (window.__log = []));
   await p.waitForTimeout(12300);
   st = await p.evaluate(() => ({ log: window.__log.join(','), active: window.__recs.some((r) => r.active) }));
-  check('timeout: mic released after 12 s', !st.active && /abort,session:playback,session:auto/.test(st.log), st.log);
+  check('timeout: mic released after 12 s', !st.active && /abort,session:playback$/.test(st.log), st.log);
 
   // 6) navigation away while listening
   await p.click('.searchbar__mic'); await p.waitForTimeout(60);
@@ -88,9 +97,46 @@ const { chromium } = require('playwright');
   check('page hidden releases the mic', !(await p.evaluate(() => window.__recs.some((r) => r.active))));
   await p.evaluate(() => { Object.defineProperty(document, 'hidden', { get: () => false, configurable: true }); });
 
+  // several voice searches in a row: every capture is followed by a return to playback
+  const counts = await p.evaluate(() => ({ pr: window.__log.filter((x) => x === 'session:play-and-record').length, pb: window.__log.filter((x) => x === 'session:playback').length }));
+  check('consecutive sessions: each play-and-record is undone', counts.pb >= counts.pr && (await p.evaluate(() => navigator.audioSession.type)) === 'playback', JSON.stringify(counts));
   // explicit Play resumes the same song
   await p.click('.play-btn'); await p.waitForTimeout(400);
   check('Play resumes the same track', await playing() && (await p.textContent('.player__title')) === time0);
+
+  // Car View: "Tìm bài" on Now Playing opens TYPED search — music keeps playing, no microphone
+  const car = await b.newContext({ viewport: { width: 1024, height: 600 }, hasTouch: true });
+  await car.addInitScript(() => {
+    localStorage.setItem('ambertube:display-mode', 'car'); window.__recs = [];
+    window.SpeechRecognition = class { constructor() { window.__recs.push(this); } start() { this.active = true; } stop() {} abort() { this.active = false; } };
+  });
+  const c = await car.newPage();
+  await c.goto((process.env.AMBERTUBE_URL || 'http://localhost:4173') + '/search?q=sunset');
+  await c.waitForSelector('.video-row:not(.video-row--skeleton)');
+  await c.click('.video-row >> nth=0'); await c.waitForTimeout(600);
+  const carPlaying = async () => (await c.getAttribute('.cbtn--play', 'aria-label')) === 'Tạm dừng';
+  await c.click('.cplayer__info, .cplayer__art'); await c.waitForTimeout(300);
+  await c.click('.np__find'); await c.waitForTimeout(300);
+  check('Car "Tìm bài": keyboard search box focused', await c.evaluate(() => document.activeElement?.classList.contains('searchbar__input')));
+  check('Car "Tìm bài": music keeps playing, mic not used', await carPlaying() && (await c.evaluate(() => window.__recs.length)) === 0);
+  await c.keyboard.type('acoustic chill', { delay: 30 }); await c.keyboard.press('Enter'); await c.waitForTimeout(800);
+  check('Car keyboard search (with a space typed): music keeps playing', await carPlaying());
+  await car.close();
+  // diagnostics panel (?diag=1): voice + player lifecycle logged, never the transcript
+  const d = await b.newContext({ viewport: { width: 1280, height: 800 } });
+  await d.addInitScript(() => { window.__recs = []; window.SpeechRecognition = class { constructor() { window.__recs.push(this); } start() { setTimeout(() => this.onstart && this.onstart(), 10); } stop() {} abort() {} }; });
+  const dp = await d.newPage();
+  await dp.goto((process.env.AMBERTUBE_URL || 'http://localhost:4173') + '/search?q=sunset&diag=1');
+  await dp.waitForSelector('.video-row:not(.video-row--skeleton)'); await dp.click('.video-row >> nth=0'); await dp.waitForTimeout(500);
+  await dp.click('.searchbar__mic'); await dp.waitForTimeout(100);
+  await dp.evaluate(() => window.__recs.at(-1).onresult({ results: [Object.assign([{ transcript: 'bí mật riêng tư' }], { isFinal: true })] }));
+  await dp.waitForTimeout(200);
+  const logText = await dp.textContent('.diag__list');
+  check('diagnostics: voice + player events logged', ['voice.start', 'voice.onstart', 'voice.result', 'voice.finish', 'player.pause', 'player.load'].every((k) => logText.includes(k)), logText.slice(0, 160));
+  check('diagnostics: transcript never logged', !logText.includes('bí mật'));
+  await dp.goto((process.env.AMBERTUBE_URL || 'http://localhost:4173') + '/?diag=0'); await dp.waitForTimeout(400);
+  check('diagnostics off with ?diag=0', !(await dp.$('.diag')));
+  await d.close();
   check('no page errors', errs.length === 0, errs.join(' | '));
   console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
   await b.close();

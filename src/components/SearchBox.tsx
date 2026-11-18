@@ -114,9 +114,11 @@ export default function SearchBox() {
   const voiceRef = useRef({ voice, value });
   voiceRef.current = { voice, value };
   useEffect(() => {
-    const onFind = () => {
+    // "Tìm bài" opens TYPED search: focus the box, never the microphone and never pausing the music.
+    // Voice search (which pauses the music first) only starts from the mic button, or `detail.voice`.
+    const onFind = (e: Event) => {
       const { voice: v, value: cur } = voiceRef.current;
-      if (v.supported && !v.listening) startVoiceRef.current(cur);
+      if ((e as CustomEvent<{ voice?: boolean }>).detail?.voice && v.supported && !v.listening) startVoiceRef.current(cur);
       else {
         inputRef.current?.focus();
         inputRef.current?.select();

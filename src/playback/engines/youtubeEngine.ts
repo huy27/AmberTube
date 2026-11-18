@@ -1,7 +1,9 @@
+import { diag } from '../../diag/audioDiag';
 import type { Track } from '../../types';
 import type { EngineEvents, LoadOptions, PlaybackEngine } from './types';
 
 const STATE = { ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5 } as const;
+const STATE_NAME: Record<number, string> = { [-1]: 'UNSTARTED', 0: 'ENDED', 1: 'PLAYING', 2: 'PAUSED', 3: 'BUFFERING', 5: 'CUED' };
 
 const ERRORS: Record<number, string> = {
   2: 'Link video không hợp lệ.',
@@ -76,6 +78,7 @@ export class YouTubeEngine implements PlaybackEngine {
         },
         onStateChange: (e) => this.onState(e),
         onError: (e) => {
+          diag('yt.error', { code: e.data });
           this.events.onBuffering(false);
           this.events.onError(ERRORS[e.data] ?? 'Không phát được video này.');
         },
@@ -124,6 +127,7 @@ export class YouTubeEngine implements PlaybackEngine {
 
   private onState(e: YT.OnStateChangeEvent) {
     const p = e.target;
+    diag('yt.state', { state: STATE_NAME[e.data] ?? e.data });
     if (e.data === STATE.ENDED) return this.fireEnded(p);
     this.lastState = e.data;
     if (e.data === STATE.PLAYING) {

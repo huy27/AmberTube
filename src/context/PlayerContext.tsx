@@ -12,6 +12,8 @@ import * as Q from '../playback/queue';
 import { SPEEDS, effectiveSpeed, formatSpeed, supportedSpeeds } from '../playback/speeds';
 import { loadPlayerSnapshot, savePlayerSnapshot } from '../playback/persistence';
 import { useLibrary } from './LibraryContext';
+import { ensurePlaybackSession } from '../playback/audioSession';
+import { diag } from '../diag/audioDiag';
 import { useToast } from './ToastContext';
 import { useListeningStore } from '../recommend/ListeningStore';
 import type { EndReason } from '../recommend/listening';
@@ -171,12 +173,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return {
         onPlay: () => {
           if (!active()) return;
+          diag('engine.play', { provider: id });
           errorStreak.current = 0;
           setIsPlaying(true);
           setBuffering(false);
           setAutoplayBlocked(false);
         },
-        onPause: () => active() && setIsPlaying(false),
+        onPause: () => {
+          if (!active()) return;
+          diag('engine.pause', { provider: id });
+          setIsPlaying(false);
+        },
         onEnded: () => active() && handlers.current.ended(),
         onError: (msg) => active() && handlers.current.error(msg),
         onBuffering: (b) => active() && setBuffering(b),
@@ -184,6 +191,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         onRates: (r) => active() && setProviderRates(r.length ? r : [1]),
         onBlocked: () => {
           if (!active()) return;
+          diag('engine.blocked', { provider: id });
           setIsPlaying(false);
           setBuffering(false);
           setAutoplayBlocked(true);
@@ -228,6 +236,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       finalizeListen(endReason.current);
       endReason.current = 'switched';
       const engine = engineFor(t.provider);
+      if (opts.autoplay) ensurePlaybackSession('load track');
+      diag('player.load', { provider: t.provider, autoplay: opts.autoplay });
       if (activeEngine.current && activeEngine.current !== t.provider) engineFor(activeEngine.current).stop();
       activeEngine.current = t.provider;
       loadedId.current = t.id;
@@ -250,6 +260,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
 
   const pause = useCallback(() => {
+    diag('player.pause');
     activeEngineObj()?.pause();
     setIsPlaying(false);
   }, []);
@@ -266,6 +277,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (loadedId.current !== t.id) return loadQueue(q, { autoplay: true, startAt: ct });
     if (!session.current) startSession(t, ct);
     setAutoplayBlocked(false);
+    ensurePlaybackSession('play');
+    diag('player.play', { provider: t.provider, at: Math.round(ct) });
     activeEngineObj()?.play();
     setIsPlaying(true);
   }, [loadQueue]);
@@ -559,15 +572,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (Number.isFinite(pos)) setCurrentTime(pos);
     };
     const onVisibility = () => {
+      diag('page.visibility', { state: document.visibilityState });
       if (document.hidden) persistNow();
       else sync();
     };
     const onHide = (e: PageTransitionEvent) => {
+      diag('page.pagehide', { persisted: e.persisted });
       persistNow();
       // the page is really going away (not just into the back/forward cache): close the listening session
       if (!e.persisted) finalizeListen('closed');
     };
-    const onShow = (e: PageTransitionEvent) => e.persisted && sync();
+    const onShow = (e: PageTransitionEvent) => {
+      diag('page.pageshow', { persisted: e.persisted });
+      if (e.persisted) sync();
+    };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', onHide);
     window.addEventListener('pageshow', onShow);

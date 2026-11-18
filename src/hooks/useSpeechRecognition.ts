@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { VoiceLang } from '../types';
+import { markMicActive, setAudioSessionType } from '../playback/audioSession';
+import { diag } from '../diag/audioDiag';
 
 export type VoiceError = 'not-allowed' | 'no-speech' | 'audio-capture' | 'network' | 'language-not-supported' | 'unknown';
 
@@ -34,25 +36,9 @@ const MAX_LISTEN_MS = 12_000;
 /** After stop(): wait this long for the final result, then abort. */
 const STOP_GRACE_MS = 1_500;
 
-type AudioSessionType = 'auto' | 'playback' | 'transient' | 'transient-solo' | 'ambient' | 'play-and-record';
-const audioSession = (): { type: AudioSessionType } | null =>
-  (typeof navigator !== 'undefined' && (navigator as Navigator & { audioSession?: { type: AudioSessionType } }).audioSession) || null;
-
-/**
- * After the microphone is released, iOS Safari can leave the page's audio session in
- * "play-and-record" (voice/telephony route, e.g. CarPlay stays in voice mode). Where the
- * standard Audio Session API exists (Safari 16.4+), tell the browser the page is a media
- * player again so iOS can return to the normal media route. No-op elsewhere.
- */
+/** After the microphone is released: hand the page back to media playback (see playback/audioSession.ts). */
 export function releaseMicAudioSession(): void {
-  const s = audioSession();
-  if (!s) return;
-  try {
-    s.type = 'playback';
-    s.type = 'auto';
-  } catch {
-    /* not supported */
-  }
+  setAudioSessionType('playback', 'microphone released');
 }
 
 /**
@@ -69,8 +55,9 @@ export function useSpeechRecognition({ lang, onTranscript, onError }: Options) {
   const supported = getRecognitionCtor() !== null;
 
   /** End the session for good: detach handlers, abort if still capturing, release the audio session. */
-  const finish = useCallback((r: VoiceRecognition | null = rec.current) => {
+  const finish = useCallback((r: VoiceRecognition | null = rec.current, why = 'cleanup') => {
     if (!r) return;
+    if (rec.current === r) diag('voice.finish', { why });
     timers.current.forEach(clearTimeout);
     timers.current = [];
     r.onstart = r.onresult = r.onerror = r.onend = null;
@@ -82,36 +69,45 @@ export function useSpeechRecognition({ lang, onTranscript, onError }: Options) {
     if (rec.current === r) {
       rec.current = null;
       setListening(false);
+      markMicActive(false);
       releaseMicAudioSession();
     }
   }, []);
 
   /** Cancel immediately (user cancel, navigation, page hidden, unmount). */
-  const cancel = useCallback(() => finish(), [finish]);
+  const cancel = useCallback(() => finish(rec.current, 'cancel'), [finish]);
 
   /** Stop listening but keep what was said: give the engine a moment for the final result. */
   const stop = useCallback(() => {
     const r = rec.current;
     if (!r) return;
+    diag('voice.stop');
     try {
       r.stop();
     } catch {
       /* ignore */
     }
-    timers.current.push(setTimeout(() => finish(r), STOP_GRACE_MS));
+    timers.current.push(setTimeout(() => finish(r, 'stop grace elapsed'), STOP_GRACE_MS));
   }, [finish]);
 
   const start = useCallback(() => {
     const Ctor = getRecognitionCtor();
     if (!Ctor) return;
-    finish(); // never two sessions at once
+    finish(rec.current, 'new session'); // never two sessions at once
+    // the page is about to capture the microphone: say so explicitly (released → "playback" afterwards)
+    markMicActive(true);
+    setAudioSessionType('play-and-record', 'voice search starting');
     const r = new Ctor();
     r.lang = lang;
     r.interimResults = true;
     r.continuous = false;
     r.maxAlternatives = 1;
     const current = () => rec.current === r; // ignore callbacks from an old session
-    r.onstart = () => current() && setListening(true);
+    r.onstart = () => {
+      if (!current()) return;
+      diag('voice.onstart');
+      setListening(true);
+    };
     r.onresult = (e) => {
       if (!current()) return;
       let text = '';
@@ -121,39 +117,48 @@ export function useSpeechRecognition({ lang, onTranscript, onError }: Options) {
         if (e.results[i].isFinal) final = true;
       }
       cb.current.onTranscript(text.trim(), final);
-      if (final) finish(r); // got the query: release the mic right away
+      if (final) {
+        diag('voice.result', { final: true, chars: text.trim().length }); // never the transcript itself
+        finish(r, 'final result'); // got the query: release the mic right away
+      }
     };
     r.onerror = (e) => {
       if (!current()) return;
       const err = mapError(e.error);
-      finish(r);
+      diag('voice.error', { code: e.error });
+      finish(r, 'error');
       if (err) cb.current.onError(err);
     };
-    r.onend = () => finish(r);
+    r.onend = () => {
+      diag('voice.onend');
+      finish(r, 'engine ended');
+    };
     rec.current = r;
     timers.current.push(setTimeout(() => {
       if (!current()) return;
-      finish(r);
+      finish(r, 'timeout');
       cb.current.onError('no-speech');
     }, MAX_LISTEN_MS));
+    diag('voice.start', { lang });
     try {
       r.start();
-    } catch {
-      finish(r);
+    } catch (e) {
+      diag('voice.startFailed', { error: String(e) });
+      finish(r, 'start threw');
       cb.current.onError('unknown');
     }
   }, [lang, finish]);
 
   // unmount, or the page goes to the background / screen locks while listening: release the mic
   useEffect(() => {
-    const onHidden = () => document.hidden && finish();
-    const onPageHide = () => finish();
+    const onHidden = () => document.hidden && finish(rec.current, 'page hidden');
+    const onPageHide = () => finish(rec.current, 'pagehide');
     document.addEventListener('visibilitychange', onHidden);
     window.addEventListener('pagehide', onPageHide);
     return () => {
       document.removeEventListener('visibilitychange', onHidden);
       window.removeEventListener('pagehide', onPageHide);
-      finish();
+      finish(rec.current, 'unmount');
     };
   }, [finish]);
 

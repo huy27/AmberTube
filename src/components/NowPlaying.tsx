@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ChevronDown, SkipBack, SkipForward, Play, Pause, Loader2, Heart, ListMusic, Infinity as InfinityIcon, ThumbsUp, ThumbsDown, Shuffle, Repeat, Repeat1, Music, Mic } from 'lucide-react';
+import { ChevronDown, SkipBack, SkipForward, Play, Pause, Loader2, Heart, ListMusic, Infinity as InfinityIcon, ThumbsUp, ThumbsDown, Shuffle, Repeat, Repeat1, Music, Search } from 'lucide-react';
 import Artwork from './Artwork';
 import ProgressBar, { useProgress } from './ProgressBar';
 import { usePlayer } from '../context/PlayerContext';
@@ -37,23 +37,25 @@ export default function NowPlaying() {
         <button className="cbtn cbtn--ghost" onClick={() => ui.setNowPlaying(false)} aria-label="Quay lại"><ChevronDown size={26} /></button>
         <span className="np__label">Đang phát</span>
         <div className="np__topright">
-          <button className="np__find" onClick={() => { ui.setNowPlaying(false); window.dispatchEvent(new Event('ambertube:find')); }} aria-label="Tìm bài (giọng nói hoặc gõ)">
-            <Mic size={20} /><span>Tìm bài</span>
+          <button className="np__find" onClick={() => { ui.setNowPlaying(false); window.dispatchEvent(new CustomEvent('ambertube:find', { detail: { voice: false } })); }} aria-label="Tìm bài (gõ bằng bàn phím, nhạc vẫn phát)">
+            <Search size={20} /><span>Tìm bài</span>
           </button>
           <button className="cbtn cbtn--ghost" onClick={() => { ui.setNowPlaying(false); ui.setPanel('queue'); }} aria-label="Hàng đợi"><ListMusic size={22} /></button>
         </div>
       </header>
       <div className="np__body">
-        {t.thumbnail || t.art ? <div className="np__art"><Artwork track={t} /></div> : <div className="np__art np__art--empty" aria-hidden="true"><Music size={56} strokeWidth={1.5} /></div>}
         <div className="np__main">
-          <div className="np__titlebar">
-            <div className="np__text">
-              <h2 className="np__title" title={t.title}>{t.title}</h2>
-              <p className="np__artist">{t.channel}</p>
+          <div className="np__head">
+            {t.thumbnail || t.art ? <div className="np__art"><Artwork track={t} /></div> : <div className="np__art np__art--empty" aria-hidden="true"><Music size={48} strokeWidth={1.5} /></div>}
+            <div className="np__titlebar">
+              <div className="np__text">
+                <h2 className="np__title" title={t.title}>{t.title}</h2>
+                <p className="np__artist">{t.channel}</p>
+              </div>
+              <button className={`np__like${saved ? ' is-on' : ''}`} onClick={() => toggleSaved(t)} aria-pressed={saved} aria-label={saved ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}>
+                <Heart size={24} fill={saved ? 'currentColor' : 'none'} />
+              </button>
             </div>
-            <button className={`np__like${saved ? ' is-on' : ''}`} onClick={() => toggleSaved(t)} aria-pressed={saved} aria-label={saved ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}>
-              <Heart size={20} fill={saved ? 'currentColor' : 'none'} />
-            </button>
           </div>
           <div className="np__progress">
             <ProgressBar variant="inline" />
@@ -82,7 +84,7 @@ export default function NowPlaying() {
               {next ? (
                 <>
                   <strong className="np__nexttitle" title={next.title}>{next.title}</strong>
-                  <span className="np__nextsub">{p.autoReasons.get(next.id) || next.channel}</span>
+                  <span className="np__nextsub" title={p.autoReasons.get(next.id) || undefined}>· {next.channel}</span>
                 </>
               ) : (
                 <span className="np__nextsub">{autoplay.enabled ? 'Tự phát sẽ chọn bài phù hợp' : 'Hết hàng đợi'}</span>

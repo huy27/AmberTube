@@ -285,6 +285,7 @@ Thử điều hướng 400 lần giữa các trang trong khi phát nhạc (`e2e/
 
 ## Tìm kiếm bằng giọng nói và CarPlay
 
+- **Chỉ tìm bằng giọng nói (nút micro) mới tạm dừng nhạc.** Gõ phím để tìm, kể cả nút "Tìm bài" ở màn hình Đang phát, chỉ mở ô gõ: nhạc vẫn phát, không bật micro.
 - **Trước khi bật micro:** app tạm dừng nhạc. Sau khi tìm xong, nhạc **vẫn dừng** cho tới khi bạn bấm Phát, và Smart Autoplay không tự chuyển bài.
 - **Phiên nhận dạng luôn được đóng hẳn** (`abort()` và gỡ mọi callback) trong các tình huống:
   - đã nghe ra câu tìm;
@@ -297,6 +298,15 @@ Thử điều hướng 400 lần giữa các trang trong khi phát nhạc (`e2e/
   Không bao giờ có hai phiên chạy cùng lúc, và callback của phiên cũ bị bỏ qua.
 - **App không dùng `getUserMedia`:** nhận dạng giọng nói do trình duyệt tự giữ micro, nên không có MediaStreamTrack nào để dừng.
 - **Trả lại chế độ phát nhạc:** sau khi nhả micro, nếu Safari có Audio Session API (`navigator.audioSession`, từ Safari 16.4), app đặt kiểu phiên âm thanh về `playback` rồi `auto`. Mục đích là để iOS rời chế độ thu âm, tránh việc CarPlay kẹt ở chế độ thoại.
+- **Phiên âm thanh của trang (Audio Session API, Safari/WKWebView iOS 16.4+):**
+  - Ngay trước khi nghe, app đặt `navigator.audioSession.type = "play-and-record"`.
+  - Khi nhả micro (nghe xong, lỗi, hủy, quá giờ, trang ẩn), app đặt về `"playback"` và **giữ nguyên**, không trả về `"auto"`.
+  - Mỗi lần người dùng bấm Phát hoặc chuyển bài, app cũng xác nhận lại `"playback"` (trừ lúc micro đang mở).
+  - Lý do: ở chế độ `auto`, WebKit giữ phiên "thu + phát" nếu nhạc phát tiếp ngay sau khi dùng micro, nên âm thanh đi ra loa iPhone hoặc kênh thoại thay vì loa xe. Tải lại trang (F5) chữa được vì trang mới không còn dấu vết đã dùng micro.
+- **Chẩn đoán trên thiết bị:** mở app với `?diag=1` để hiện bảng nhật ký, mở lại với `?diag=0` để tắt.
+  - Bảng ghi: bắt đầu/kết thúc/lỗi tìm giọng nói, micro đang mở hay đã nhả, loại phiên âm thanh, trạng thái trình phát YouTube, phát/tạm dừng, ẩn/hiện trang, thay đổi thiết bị âm thanh.
+  - Bảng không bao giờ ghi âm thanh hay nội dung câu nói.
+  - Nút "Sao chép" để gửi nhật ký.
 - **Giới hạn:** web không điều khiển được AVAudioSession. Nếu iOS hoặc CarPlay vẫn giữ chế độ thoại thì chỉ ứng dụng native mới sửa triệt để. Cách làm: dùng SFSpeechRecognizer, rồi `AVAudioSession.setActive(false, options: .notifyOthersOnDeactivation)` và chuyển category về `.playback` sau khi nhận dạng xong, ví dụ qua plugin Capacitor.
 
 ## Phát YouTube
