@@ -1,5 +1,6 @@
+import BrandMark from './BrandMark';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Search, Library, ListMusic, Download, Settings, Play, History, Timer } from 'lucide-react';
+import { Home, Search, Library, ListMusic, Download, Settings, History, Timer } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 
@@ -57,8 +58,8 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 export function Brand() {
   return (
     <NavLink to="/" className="brand" aria-label="Trang chủ AmberTube">
-      <span className="brand__mark"><Play size={14} fill="currentColor" strokeWidth={0} /></span>
-      <span className="brand__name">AmberTube</span>
+      <BrandMark className="brand__mark" />
+      <span className="brand__name">Amber<span className="brand__accent">Tube</span></span>
     </NavLink>
   );
 }

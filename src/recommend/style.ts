@@ -70,4 +70,8 @@ export const MOOD_GENRES: Record<string, string[]> = {
   happy: ['happy', 'pop', 'vpop', 'kpop'],
   sad: ['sad', 'ballad', 'acoustic', 'piano'],
   acoustic: ['acoustic', 'folk', 'indie'],
+  english: ['pop', 'rnb', 'indie', 'rock', 'acoustic'],
 };
+
+/** Categories that are about a language rather than a style. */
+export const MOOD_LANG: Record<string, string> = { english: 'en' };

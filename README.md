@@ -111,7 +111,7 @@ Nút **Máy tính / Car View** nằm trên thanh đầu trang, trong menu và tr
   - **Radio bài hát:** chọn "Bắt đầu Radio" trong menu Thêm.
   - **Radio nghệ sĩ:** chọn trong menu Thêm.
   - **Radio của tôi:** trên Trang chủ.
-  - **Radio tâm trạng:** nút sóng radio trên từng ô tâm trạng.
+  - **Radio tâm trạng:** nút sóng radio trên từng ô tâm trạng, gồm cả mục **Nhạc tiếng Anh**. Radio này chỉ chọn bài không xác định được ngôn ngữ hoặc có ngôn ngữ là tiếng Anh; bài đã biết là ngôn ngữ khác bị loại.
 - **Smart Autoplay:** nút ∞ trên trình phát và mục điều khiển trong Hàng đợi, có 3 chế độ: Giống bài này / Cân bằng (mặc định) / Khám phá.
   - Bấm một kết quả tìm kiếm chỉ phát đúng bài đó. Hết bài thì app tự phát tiếp các bài gợi ý.
   - Khi chỉ còn ≤ 2 bài trong hàng đợi, app tự thêm tối đa 8 bài gợi ý.
@@ -178,6 +178,38 @@ Endpoint cần nhận `GET ?title=&artist=&duration=` và trả về `{ lrc?, pl
 ## Hiệu ứng âm thanh
 
 Phân tích âm thanh thật (AnalyserNode) chỉ dùng cho file trên máy, vì đó là luồng âm thanh ứng dụng được phép truy cập. Với YouTube và bài demo, hiệu ứng chỉ là hoạt ảnh trang trí. Ứng dụng không cố truy cập âm thanh được bảo vệ của YouTube.
+
+## Responsive (mọi kích thước màn hình)
+
+| Bố cục | Khi nào |
+| --- | --- |
+| Đầy đủ (thanh bên + thanh phát lớn) | rộng > 900 px |
+| Thanh bên thu gọn thành biểu tượng | 701–900 px |
+| Gọn (thanh trên + menu ☰ + trình phát gọn) | Car View, rộng ≤ 700 px (điện thoại dọc), **hoặc cao ≤ 500 px** (điện thoại xoay ngang, màn hình 480 px) |
+
+- **Danh sách bài:** các cột tự co theo độ rộng vùng nội dung (container query). Vùng hẹp thì ẩn cột Lượt xem trước, rồi đến cột Kênh, tên kênh chuyển xuống dưới tên bài.
+- **Màn hình cảm ứng** (`pointer: coarse`: điện thoại, tablet, màn hình xe):
+  - mọi nút ≥ 44 px, kể cả ở bố cục đầy đủ trên tablet;
+  - nút thao tác trên mỗi dòng luôn hiện, không cần rê chuột;
+  - công tắc to hơn và có vùng chạm mở rộng.
+- **Menu "Thêm":** mở về phía còn nhiều chỗ, chiều cao giới hạn theo khoảng trống (nội dung dài thì cuộn bên trong), và canh trái khi nút nằm sát mép trái.
+- **Bảng Hàng đợi / Lời bài hát** không rộng quá màn hình.
+- **Focus Mode** trên màn hình thấp hoặc hẹp cho phép cuộn, không cắt mất nút.
+- **Kiểm tra tự động** (`e2e/responsive-audit.cjs`): mọi trang, menu, bảng, ô gợi ý tìm kiếm, Now Playing, menu ☰ và Focus Mode ở 14 kích thước:
+  - 320×568, 375×667, 390×844, 430×932;
+  - 768×1024, 1024×768;
+  - 1280×720, 1440×900, 1920×1080;
+  - 800×480, 854×480, 1024×600 (cả chế độ máy tính và Car View);
+  - 844×390, 667×375 (điện thoại xoay ngang).
+
+  Các lỗi được dò: trang cuộn ngang, nút bị cắt, nội dung bị trình phát che, nút cảm ứng nhỏ, menu/bảng tràn khỏi màn hình, chữ bị cắt không có dấu "…". Kết quả: **0 lỗi**.
+
+## Thương hiệu
+
+- **Biểu tượng "Giọt hổ phách":** giọt nhựa hổ phách ôm nút Play. Một nguồn SVG duy nhất (`src/components/BrandMark.tsx`, `public/logo.svg`) dùng cho header, Focus Mode, favicon và icon ứng dụng.
+- **Favicon:** `favicon.svg`, và `favicon.ico` (16/32/48 px) cho trình duyệt cũ. Biểu tượng nằm trên ô vuông màu than nên rõ trên cả tab sáng lẫn tối.
+- **Icon ứng dụng:** `apple-touch-icon.png` (180 px) cho màn hình chính iPhone; `icon-192.png`, `icon-512.png` và `site.webmanifest` cho Android/PWA.
+- **Tiêu đề trang:** "AmberTube – Your Music, Your Vibe".
 
 ## Car View: chế độ tiết kiệm hiệu năng
 

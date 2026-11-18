@@ -7,7 +7,8 @@ const DISMISS_KEY = 'ambertube:car-suggest-dismissed';
 /** compact landscape screens such as in-car browsers (a hint only — never switches automatically) */
 const COMPACT_LANDSCAPE = '(orientation: landscape) and (max-height: 640px) and (min-width: 700px) and (max-width: 1300px)';
 
-const NARROW = '(max-width: 700px)';
+/** phones (portrait) and short landscape screens (phones sideways, 7" displays) use the compact layout */
+const NARROW = '(max-width: 700px), (max-height: 500px)';
 
 interface DisplayModeApi {
   mode: DisplayMode;

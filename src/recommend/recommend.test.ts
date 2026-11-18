@@ -125,6 +125,7 @@ test('less like this pushes similar tracks down; more like this pulls them up', 
 import { contextPicks } from './engine.ts';
 import { appendAuto } from '../playback/queue.ts';
 import { info } from './identity.ts';
+import { languageOf } from './style.ts';
 const infoKey = (t: Track) => info(t).key;
 
 const yt = (id: string, title: string, channel: string, genres: string[], duration = 230, extra: Partial<Track> = {}): Track => ({
@@ -234,4 +235,11 @@ test('mood and my radio contexts produce picks; reasons only cite real signals',
   assert.ok(my.length > 0);
   const cold = contextPicks({ type: 'autoplay', track: seed }, inp2(), 6, { random: () => 0.5 });
   assert.ok(!cold.some((p) => /lịch sử nghe|bạn thích/i.test(p.reason)), 'no history → never claims history-based reasons');
+});
+
+test('English music category: no songs known to be in another language', () => {
+  const en = [yt('e1', 'Adele - Hello (Official Audio)', 'Adele', ['pop', 'ballad'], 295, { lang: 'en' }), yt('e2', 'Coldplay - Yellow (Official Audio)', 'Coldplay', ['rock', 'pop'], 266, { lang: 'en' })];
+  const res = contextPicks({ type: 'mood', mood: 'english' }, inp2({ pool: [...pool2, ...en] }), 8, { random: () => 0.5 });
+  assert.ok(res.length >= 2);
+  assert.ok(res.every((p) => languageOf(p.track) !== 'vi'), res.map((p) => p.track.title).join(', '));
 });

@@ -41,7 +41,7 @@
 /* ---------- Header ---------- */
 .fm-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 16px 24px; }
 .fm-header__brand { display: flex; align-items: center; gap: 10px; }
-.fm-header__brand .brand__mark { width: 30px; height: 21px; border-radius: 6px; }
+.fm-header__brand .brand__mark { width: 24px; height: 24px; }
 .fm-header__name { font-weight: 600; font-size: 17px; }
 .fm-header__mode { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); padding: 3px 8px; border-radius: 10px; background: var(--accent-soft); }
 .fm-header__actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }

@@ -1,0 +1,35 @@
+/* ===== Shared responsive rules (all layouts) =====
+   Breakpoints used across the app:
+   - compact layout (top bar + menu drawer + compact player): Car View, width ≤ 700px, or height ≤ 500px
+   - sidebar collapses to icons at ≤ 900px; tracklist columns adapt with container queries
+   - touch screens (pointer: coarse) get ≥ 44px targets on every control, whatever the layout */
+
+.menu--left { right: auto; left: 0; }
+.side-panel { width: min(360px, 100%); }
+
+@media (pointer: coarse) {
+  .icon-btn, .tl-icon, .video-row .more__btn, .more__btn, .mode-toggle__btn, .popover__trigger,
+  .searchbar__clear, .searchbar__mic, .searchbar__lang, .shelf__nav button, .queue__remove, .autoplay__refresh,
+  .mood__radio, .lyrics .icon-btn, .side-panel .icon-btn, .link-btn, .chip, .seg__btn, .tl-filter {
+    min-width: 44px; min-height: 44px;
+  }
+  .dl-btn, .dl-btn.dl-btn--mp3, .btn, .menu__item, .popover__item, .fm-chip, .suggest__remove { min-height: 44px; }
+  .fm-sound__toggle, .suggest__remove, .brand, .sleep .popover__trigger, .dl-btn--compact { min-width: 44px; min-height: 44px; }
+  .toggle::before { content: ''; position: absolute; inset: -9px -6px; } /* 64×48 hit area around the 52×30 switch */
+  .btn--sm { padding-inline: 14px; }
+  /* bigger switch on touch screens */
+  .toggle { width: 52px; height: 30px; border-radius: 15px; }
+  .toggle__knob { width: 24px; height: 24px; }
+  .toggle.is-on .toggle__knob { transform: translateX(22px); }
+  .mood__radio { top: 4px; right: 4px; }
+  .seg__btn { padding-inline: 14px; }
+  .tl-filter { height: 44px; }
+  .tracklist { --tl-act: 168px; --tl-act-sm: 92px; } /* MP3 + two 44px buttons */
+  /* actions are always visible on touch screens (no hover) */
+  .video-row .tl-actions { opacity: 1; }
+}
+
+/* Focus mode on small or short screens: let the page scroll instead of clipping controls */
+@media (max-height: 560px), (max-width: 420px) {
+  .fm { overflow-y: auto; grid-template-rows: auto auto auto; }
+}

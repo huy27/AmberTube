@@ -71,6 +71,7 @@ export const MOODS: Mood[] = [
   { id: 'happy', label: 'Vui vẻ', query: 'happy music', hue: 45 },
   { id: 'sad', label: 'Buồn', query: 'sad songs', hue: 215 },
   { id: 'acoustic', label: 'Acoustic', query: 'acoustic songs', hue: 120 },
+  { id: 'english', label: 'Nhạc tiếng Anh', query: 'top english songs', hue: 340 },
 ];
 
 const STOP_WORDS = new Set(['music', 'songs', 'song', 'mix', 'playlist', 'lo', 'fi', 'the', 'and', 'to']);

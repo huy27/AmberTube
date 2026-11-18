@@ -11,7 +11,7 @@ import type { Track } from '../types.ts';
 import { aggregate, isRealListen, isSkip, type ListenEvent } from './listening.ts';
 import { normalize } from '../search/normalize.ts';
 import { dedupeSongs, info, isSameSong, cleanArtist } from './identity.ts';
-import { GENRE_LABEL, MOOD_GENRES, genresOf, languageOf } from './style.ts';
+import { GENRE_LABEL, MOOD_GENRES, MOOD_LANG, genresOf, languageOf } from './style.ts';
 
 // ------------------------------------------------------------------ types
 
@@ -300,7 +300,9 @@ function seedFor(ctx: RecoContext, inp: Inputs, p: Profile, pool: Track[]): Seed
     }
     case 'mood': {
       const genres = new Map((MOOD_GENRES[ctx.mood] ?? []).map((g, i) => [g, 1 - i * 0.15] as [string, number]));
-      return { genres, artists: new Map(), lang: topN(p.lang, 1), long: p.longListener, label: ctx.mood };
+      // a language category (English music) asks for that language rather than the user's usual one
+      const lang = MOOD_LANG[ctx.mood] ? new Map([[MOOD_LANG[ctx.mood], 1]]) : topN(p.lang, 1);
+      return { genres, artists: new Map(), lang, long: p.longListener, label: ctx.mood };
     }
     case 'my':
     default:
@@ -448,6 +450,9 @@ export function contextPicks(ctx: RecoContext, inp: Inputs, n: number, opts: Pic
   let pool = opts.exclude ? cleanPool(inp).filter((t) => !opts.exclude!.has(t.id)) : cleanPool(inp);
   const seed = seedFor(ctx, inp, p, pool);
   pool = pool.filter((t) => valid(t, seed) && !excluded.some((x) => isSameSong(x, t)) && !recentPlays.some((x) => isSameSong(x, t)));
+  // language category (e.g. English music): drop songs known to be in another language
+  const wantLang = ctx.type === 'mood' ? MOOD_LANG[ctx.mood] : undefined;
+  if (wantLang) pool = pool.filter((t) => { const l = languageOf(t); return !l || l === wantLang; });
 
   const scored = pool.map((t) => {
     const c = components(t, seed, p);

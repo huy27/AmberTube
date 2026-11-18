@@ -24,6 +24,7 @@ export default function MoreMenu({ track, onRemove, removeLabel = 'Xóa khỏi p
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<'main' | 'playlists'>('main');
   const [up, setUp] = useState(false);
+  const [fit, setFit] = useState<{ maxHeight: number; alignLeft: boolean }>({ maxHeight: 470, alignLeft: false });
   const root = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const { playNext, addToQueue } = usePlayer();
@@ -38,8 +39,14 @@ export default function MoreMenu({ track, onRemove, removeLabel = 'Xóa khỏi p
 
   useLayoutEffect(() => {
     if (!open || !root.current) return;
+    // keep the menu inside the viewport on every screen: open towards the side with more room,
+    // cap its height to that room (it scrolls inside), and align it left when the button is near the left edge
     const r = root.current.getBoundingClientRect();
-    setUp(window.innerHeight - r.bottom < 360);
+    const below = window.innerHeight - r.bottom - 10;
+    const above = r.top - 10;
+    const goUp = below < 300 && above > below;
+    setUp(goUp);
+    setFit({ maxHeight: Math.max(160, Math.min(470, goUp ? above : below)), alignLeft: r.right < Math.min(250, window.innerWidth - 8) });
     menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
   }, [open, view]);
 
@@ -91,7 +98,7 @@ export default function MoreMenu({ track, onRemove, removeLabel = 'Xóa khỏi p
       </button>
 
       {open && (
-        <div ref={menu} className={`menu${up ? ' menu--up' : ''}`} role="menu" onClick={(e) => e.stopPropagation()} onKeyDown={onMenuKey}>
+        <div ref={menu} className={`menu${up ? ' menu--up' : ''}${fit.alignLeft ? ' menu--left' : ''}`} style={{ maxHeight: fit.maxHeight }} role="menu" onClick={(e) => e.stopPropagation()} onKeyDown={onMenuKey}>
           {view === 'main' ? (
             <>
               <button role="menuitem" className="menu__item" onClick={run(() => playNext(track))}>

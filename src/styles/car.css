@@ -337,3 +337,6 @@ html.mode-car .fm-exit, html.mode-car .fm-mixer, html.mode-car [class*='fm-'] { 
 /* artwork sized like the design: about a third of the width, never dominating large screens */
 .np__art { height: min(100%, 58vh, 34vw, 320px); }
 .np__body { grid-template-columns: auto minmax(0, 520px); justify-content: center; }
+
+/* small phones: give the song title the room ("next up" is on Now Playing) */
+@media (max-width: 420px) { .cplayer__next { display: none; } }

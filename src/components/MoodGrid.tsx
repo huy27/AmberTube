@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Radio, Headphones, Waves, Target, BrainCircuit, CloudRain, Moon, Dumbbell, Smile, CloudDrizzle, Guitar } from 'lucide-react';
+import { Radio, Languages, Headphones, Waves, Target, BrainCircuit, CloudRain, Moon, Dumbbell, Smile, CloudDrizzle, Guitar } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { MOODS } from '../data/demoCatalog';
 import { useRecommendations } from '../recommend/RecommendationProvider';
@@ -16,6 +16,7 @@ const ICONS: Record<string, LucideIcon> = {
   happy: Smile,
   sad: CloudDrizzle,
   acoustic: Guitar,
+  english: Languages,
 };
 
 /** Mood & Discovery tiles — each runs a YouTube search for its mood. */

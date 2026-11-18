@@ -45,7 +45,7 @@ const FAKE_YT = () => {
 
   // ---------- Mood & Discovery ----------
   const moods = await p.$$eval('.mood__label', (e) => e.map((x) => x.textContent));
-  check('10 mood categories on Home', moods.join(',') === 'Lo-fi,Thư giãn,Tập trung,Làm việc sâu,Tiếng mưa,Ngủ ngon,Tập luyện,Vui vẻ,Buồn,Acoustic', moods.join(','));
+  check('11 mood categories on Home (incl. English music)', moods.join(',') === 'Lo-fi,Thư giãn,Tập trung,Làm việc sâu,Tiếng mưa,Ngủ ngon,Tập luyện,Vui vẻ,Buồn,Acoustic,Nhạc tiếng Anh', moods.join(','));
   await p.click('.mood:has-text("Tập luyện")');
   await p.waitForURL(/\/search/);
   await p.waitForSelector('.video-row:not(.video-row--skeleton)');

@@ -126,7 +126,7 @@ export default function HomePage() {
     <>
       {(recs.dailyMix.length > 0 || radioSeed) && (
         <div className="mix-row">
-          {!recsReady && history.length > 0 && <div className="mix-card mix-card--sk sk" aria-hidden="true" />}
+          {!recsReady && history.length >= 5 && <div className="mix-card mix-card--sk sk" aria-hidden="true" />}
           {recs.dailyMix.length > 0 && <DailyMixCard mix={recs.dailyMix} />}
           {radioSeed && <RadioTile seed={radioSeed} />}
           <MyRadioTile />
@@ -165,9 +165,12 @@ export default function HomePage() {
 
   if (car) {
     // Car View: music first — continue listening, daily mix / radio, moods, then a few suggestions
-    const mixRow = !recs.coldStart && (recs.dailyMix.length > 0 || radioSeed) && (
+    // before the first recommendation pass: only reserve the row for users with real history
+    // (a brand-new user will get the cold-start picker instead, so nothing should appear and vanish)
+    const warm = history.length >= 5;
+    const mixRow = (recsReady ? !recs.coldStart : warm) && (recs.dailyMix.length > 0 || radioSeed || !recsReady) && (
       <div className="mix-row">
-        {!recsReady && history.length > 0 && <div className="mix-card mix-card--sk sk" aria-hidden="true" />}
+        {!recsReady && history.length >= 5 && <div className="mix-card mix-card--sk sk" aria-hidden="true" />}
         {recs.dailyMix.length > 0 && <DailyMixCard mix={recs.dailyMix} />}
         {radioSeed && <RadioTile seed={radioSeed} />}
         <MyRadioTile />

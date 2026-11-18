@@ -1,4 +1,5 @@
-import { Play, Settings2, Maximize, Minimize, LogOut, AudioLines, ChartColumn } from 'lucide-react';
+import BrandMark from '../../components/BrandMark';
+import { Settings2, Maximize, Minimize, LogOut, AudioLines, ChartColumn } from 'lucide-react';
 import { useFocus, PHASE_LABEL, useFocusClock, formatClock } from '../PomodoroController';
 import { useUI } from '../../context/UIContext';
 import { IconBtn } from '../../components/PlayerBar';
@@ -24,8 +25,8 @@ export default function FocusHeader({ onOpenSettings, onToggleMixer, onToggleSta
   return (
     <header className="fm-header">
       <div className="fm-header__brand">
-        <span className="brand__mark"><Play size={13} fill="currentColor" strokeWidth={0} /></span>
-        <span className="fm-header__name">AmberTube</span>
+        <BrandMark className="brand__mark" size={24} />
+        <span className="fm-header__name">Amber<span className="brand__accent">Tube</span></span>
         <span className="fm-header__mode">Tập trung</span>
       </div>
 
