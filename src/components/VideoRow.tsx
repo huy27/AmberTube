@@ -49,7 +49,7 @@ export default function VideoRow({ track, index, list, onRemove, removeLabel, ex
         <span className="tl-num__play" aria-hidden="true">{playing ? <Pause size={16} fill="currentColor" strokeWidth={0} /> : <Play size={16} fill="currentColor" strokeWidth={0} />}</span>
       </span>
       <div role="cell" className="tl-title">
-        <span className="video-row__thumb"><Artwork track={track} /></span>
+        <span className="video-row__thumb"><Artwork track={track} small /></span>
         <span className="tl-title__text">
           <span className="video-row__title" title={track.title}>{track.title}</span>
           {(failed || extraMeta) && (

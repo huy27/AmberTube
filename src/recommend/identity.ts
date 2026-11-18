@@ -57,9 +57,11 @@ export function cleanArtist(name: string): string {
   return normalize(n);
 }
 
+const NOISE_RE = NOISE.map((n) => new RegExp(` ${n} `, 'g')); // compiled once, not per title
+
 function stripNoise(normTitle: string): string {
   let t = ` ${normTitle} `;
-  for (const n of NOISE) t = t.replace(new RegExp(` ${n} `, 'g'), ' ');
+  for (const re of NOISE_RE) t = t.replace(re, ' ');
   return t.replace(/\s+/g, ' ').trim();
 }
 
@@ -172,19 +174,26 @@ function representativeScore(t: Track): number {
 /** Collapse multiple uploads of the same song into one representative (order of first appearance kept). */
 export function dedupeSongs(tracks: Track[]): Track[] {
   const groups: Track[][] = [];
-  const byKey = new Map<string, Track[]>();
+  const byKey = new Map<string, Track[][]>(); // same core title + version → candidate groups
+  const seenIds = new Map<string, Track[]>();
   for (const t of tracks) {
+    const same = seenIds.get(t.id);
+    if (same) {
+      same.push(t);
+      continue;
+    }
     const k = info(t);
     const bucketKey = `${k.title}|${k.version}`;
-    const bucket = byKey.get(bucketKey) ?? [];
-    const g = bucket.length ? groups.find((grp) => grp.some((x) => isSameSong(x, t))) : undefined;
+    const bucket = byKey.get(bucketKey);
+    const g = bucket?.find((grp) => grp.some((x) => isSameSong(x, t)));
     if (g) g.push(t);
     else {
       const ng = [t];
       groups.push(ng);
-      bucket.push(t);
-      byKey.set(bucketKey, bucket);
+      if (bucket) bucket.push(ng);
+      else byKey.set(bucketKey, [ng]);
     }
+    seenIds.set(t.id, g ?? groups[groups.length - 1]);
   }
   return groups.map((g) => g.reduce((best, t) => (representativeScore(t) > representativeScore(best) ? t : best), g[0]));
 }

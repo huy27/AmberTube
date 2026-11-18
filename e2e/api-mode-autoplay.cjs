@@ -72,7 +72,7 @@ const resource = ([id, title, ch, dur]) => ({ id, snippet: { title, channelTitle
   const artists = q1.map((t) => t.split(' - ')[0]);
   check('Smart Autoplay mixes artists (no artist more than 2 times)', Object.values(artists.slice(1).reduce((m, a) => ((m[a] = (m[a] || 0) + 1), m), {})).every((n) => n <= 2), artists.join(' | '));
   for (let i = 0; i < 6; i++) { await p.click('button[aria-label^="Bài tiếp theo"]'); await p.waitForTimeout(500); }
-  await p.waitForTimeout(1500);
+  await p.waitForTimeout(4500); // refills run ~2.5 s after a song starts (idle time), never during track loading
   const upcoming = await p.$$eval('.queue__item', (els) => { const i = els.findIndex((e) => e.classList.contains('is-current')); return els.slice(i + 1).map((e) => e.querySelector('.queue__title').textContent); });
   check('queue keeps refilling with new related videos', upcoming.length >= 3, upcoming.slice(0, 3).join(' | '));
   check('extra searches stay within budget', calls.filter((c) => c.startsWith('search:')).length <= 4, `${calls.filter((c) => c.startsWith('search:')).length} searches`);

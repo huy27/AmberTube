@@ -8,11 +8,16 @@ export function foldChar(c: string): string {
   return c.normalize('NFD').replace(MARKS, '').toLowerCase();
 }
 
-/** lower-case, no diacritics, punctuation → space, collapsed whitespace */
+const memo = new Map<string, string>();
+
+/** lower-case, no diacritics, punctuation → space, collapsed whitespace (memoised: titles repeat a lot) */
 export function normalize(s: string): string {
-  let out = '';
-  for (const c of s) out += foldChar(c);
-  return out.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const hit = memo.get(s);
+  if (hit !== undefined) return hit;
+  const out = s.replace(/[đĐ]/g, 'd').normalize('NFD').replace(MARKS, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  if (memo.size > 8000) memo.clear();
+  memo.set(s, out);
+  return out;
 }
 
 const STOP = new Set(['the', 'a', 'an', 'and', 'of', 'to', 'in', 'on', 'for', 'with', 'by', 'ft', 'feat', 'official', 'video', 'audio', 'lyric', 'lyrics', 'mv', 'hd', '4k', 'music', 'nhac', 'bai', 'hat', 'cua', 'va', 'la', 'voi', 'mix', 'version', 'remix', 'live', 'full']);

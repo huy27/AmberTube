@@ -7,7 +7,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Track } from '../types';
-import { recommend, contextPicks, buildProfile, artistOf, type Inputs, type RadioMode, type Recommendations, type RecoContext, type RadioPick } from './engine';
+import { recommend, contextPicks, EMPTY_RECS, buildProfile, artistOf, type Inputs, type RadioMode, type Recommendations, type RecoContext, type RadioPick } from './engine';
 import { info } from './identity';
 import { GENRE_LABEL, genresOf, languageOf } from './style';
 import { useListeningStore } from './ListeningStore';
@@ -43,6 +43,8 @@ function readPrefs(): AutoplayPrefs {
 
 interface RecoApi {
   recs: Recommendations;
+  /** false until the first recommendation pass has run (it is deferred so startup paints first) */
+  recsReady: boolean;
   trending: Track[];
   trendingSource: 'youtube' | 'demo' | null;
   startRadio(seed: Track): Promise<void>;
@@ -58,6 +60,20 @@ interface RecoApi {
 }
 
 const Ctx = createContext<RecoApi | null>(null);
+
+/** Run `fn` after `delay` ms, in the browser's idle time when available. Returns a cancel function. */
+function whenIdle(fn: () => void, delay: number): () => void {
+  let idle = 0;
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (h: number) => void };
+  const t = setTimeout(() => {
+    if (w.requestIdleCallback) idle = w.requestIdleCallback(fn, { timeout: 2000 });
+    else fn();
+  }, delay);
+  return () => {
+    clearTimeout(t);
+    if (idle && w.cancelIdleCallback) w.cancelIdleCallback(idle);
+  };
+}
 
 // remember what was recommended (but maybe not played) so refreshes don't repeat the same candidates
 const SHOWN_KEY = 'ambertube:reco-shown';
@@ -140,7 +156,28 @@ export function RecommendationProvider({ children }: { children: ReactNode }) {
     recentlyRecommended: shownCounts(),
   }), [store.events, store.feedback, saved, playlists, searches, trending, listens, poolVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const recs = useMemo(() => recommend(inputs()), [inputs]);
+  // Home-page recommendations are not needed for playback: recompute in idle time, debounced, so the
+  // work never lands on the main thread right when a new song is starting (track switch = new listen event).
+  const [recs, setRecs] = useState<Recommendations | null>(null);
+  const firstRecs = useRef(true);
+  const userSignals = useRef({ feedback: store.feedback, saved, playlists });
+  useEffect(() => {
+    if (firstRecs.current) {
+      // startup: paint the shell and player first, then score recommendations in idle time
+      firstRecs.current = false;
+      return whenIdle(() => setRecs(recommend(inputs())), 0);
+    }
+    // explicit feedback (dislike, favourite, playlist edit) updates the page right away;
+    // listening history / pool changes (every track switch) wait for idle time
+    const u = userSignals.current;
+    const explicit = u.feedback !== store.feedback || u.saved !== saved || u.playlists !== playlists;
+    userSignals.current = { feedback: store.feedback, saved, playlists };
+    if (explicit) {
+      setRecs(recommend(inputs()));
+      return;
+    }
+    return whenIdle(() => setRecs(recommend(inputs())), 1200);
+  }, [inputs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** One Music-category API search to widen the candidate pool (cached, daily budget, each query once). */
   const lookup = useCallback(async (q: string) => {
@@ -260,7 +297,13 @@ export function RecommendationProvider({ children }: { children: ReactNode }) {
   // refill whenever the queue runs low
   const upcoming = upcomingCount({ items: player.queue, index: player.index });
   useEffect(() => {
-    if (prefs.enabled && player.track && upcoming <= REFILL_AT) void refill();
+    if (!prefs.enabled || !player.track || upcoming > REFILL_AT) return;
+    // nothing left to play → refill now; otherwise wait until the new song is playing (idle time)
+    if (upcoming === 0) {
+      void refill();
+      return;
+    }
+    return whenIdle(() => void refill(), 2500);
   }, [prefs.enabled, player.track?.id, upcoming, refill]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setAutoplay = useCallback((enabled: boolean) => {
@@ -334,7 +377,7 @@ export function RecommendationProvider({ children }: { children: ReactNode }) {
   const startMoodRadio = useCallback((moodId: string) => runRadio({ type: 'mood', mood: moodId }, `Radio ${MOODS.find((m) => m.id === moodId)?.label ?? ''}`), [runRadio]);
 
   const value = useMemo<RecoApi>(() => ({
-    recs, trending, trendingSource, startRadio, startArtistRadio, startMyRadio, startMoodRadio,
+    recs: recs ?? EMPTY_RECS, recsReady: recs !== null, trending, trendingSource, startRadio, startArtistRadio, startMyRadio, startMoodRadio,
     autoplay: { ...prefs, status }, setAutoplay, setMode, refresh, moreLikeThis, lessLikeThis,
   }), [recs, trending, trendingSource, startRadio, startArtistRadio, startMyRadio, startMoodRadio, prefs, status, setAutoplay, setMode, refresh, moreLikeThis, lessLikeThis]);
 

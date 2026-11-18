@@ -145,6 +145,7 @@ const FAKE_YT = () => {
 
   // ---------- Settings shows shortcuts ----------
   await p.click('.nav-item:has-text("Cài đặt")');
+  await p.waitForSelector('.shortcuts tr'); // Settings is code-split: wait for it to load
   const rows = await p.$$eval('.shortcuts tr', (e) => e.map((x) => x.textContent));
   check('shortcuts listed in Settings', rows.length >= 8 && rows.some((r) => r.includes('Tăng âm lượng')), `${rows.length} rows`);
 
@@ -152,6 +153,7 @@ const FAKE_YT = () => {
   await p.click('button[aria-label="Thêm vào yêu thích"]');
   await p.reload();
   await p.click('.nav-item:has-text("Thư viện")');
+  await p.waitForSelector('.video-row', { timeout: 5000 }).catch(() => {}); // Library is code-split
   check('favorites persist', (await p.$$('.video-row')).length === 1);
 
   check('no page errors', errs.length === 0, errs.join(' | '));

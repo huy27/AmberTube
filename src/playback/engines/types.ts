@@ -39,6 +39,8 @@ export interface PlaybackEngine {
   setRate(rate: number): void;
   /** Real audio analysis, only for providers that expose an accessible audio stream. */
   getAnalyser(): AnalyserNode | null;
+  /** What the media is actually doing right now (used to resync the UI when the page becomes visible again). */
+  isActuallyPlaying(): boolean;
 }
 
 export const ALL_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];

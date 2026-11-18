@@ -33,6 +33,10 @@ export class DemoEngine implements PlaybackEngine {
     }, 180);
   }
 
+  isActuallyPlaying(): boolean {
+    return this.playing;
+  }
+
   play(): void {
     if (this.playing || !this.duration) return;
     if (this.base >= this.duration) this.base = 0;

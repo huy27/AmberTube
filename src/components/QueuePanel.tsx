@@ -108,8 +108,8 @@ export default function QueuePanel() {
                   aria-label={`${i === index ? 'Đang phát: ' : ''}${t.title}. Alt+↑ hoặc Alt+↓ để sắp xếp.`}
                 >
                   <span className="queue__thumb">
-                    <Artwork track={t} />
-                    {i === index && <span className="queue__eq">{loading ? <Loader2 size={18} className="spin" /> : <Equalizer paused={!isPlaying} />}</span>}
+                    <Artwork track={t} small />
+                    {i === index && <span className="queue__eq">{loading ? <Loader2 size={18} className="spin" /> : <Equalizer paused={!isPlaying || !open} />}</span>}
                   </span>
                   <span className="queue__text">
                     <span className="queue__title">{t.title}</span>

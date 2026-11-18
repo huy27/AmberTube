@@ -54,7 +54,9 @@ export default function SearchBox() {
   const quietFocus = useRef(false); // programmatic focus shouldn't pop the dropdown over the page
   const listId = useId();
   const { settings, updateSettings } = useLibrary();
-  const { playTrack } = usePlayer();
+  const { playTrack, pause, isPlaying } = usePlayer();
+  const playerRef = useRef({ pause, isPlaying });
+  playerRef.current = { pause, isPlaying };
   const toast = useToast();
   const { compact } = useDisplayMode();
   const { history, removeSearch, clearSearches } = useSearchHistory();
@@ -85,6 +87,15 @@ export default function SearchBox() {
     }, [toast]),
   });
 
+  /** Voice search: pause the music first (it stays paused — only the user's Play resumes it), then listen. */
+  const startVoice = (current: string) => {
+    if (playerRef.current.isPlaying) playerRef.current.pause();
+    before.current = current;
+    setHeard(false);
+    setOpen(false);
+    voice.start();
+  };
+
   const toggleVoice = () => {
     if (!voice.supported) {
       toast('Trình duyệt này không hỗ trợ tìm kiếm bằng giọng nói. Bạn hãy gõ để tìm nhé.', { type: 'warning' });
@@ -92,11 +103,29 @@ export default function SearchBox() {
       return;
     }
     if (voice.listening) return voice.stop();
-    before.current = value;
-    setHeard(false);
-    setOpen(false);
-    voice.start();
+    startVoice(value);
   };
+
+  // "Tìm bài" on Now Playing: voice search when available, otherwise focus the box for typing
+  const startVoiceRef = useRef(startVoice);
+  startVoiceRef.current = startVoice;
+  // leaving the page while listening (e.g. opening another screen) releases the microphone
+  useEffect(() => () => voiceRef.current.voice.cancel(), [location.pathname]);
+  const voiceRef = useRef({ voice, value });
+  voiceRef.current = { voice, value };
+  useEffect(() => {
+    const onFind = () => {
+      const { voice: v, value: cur } = voiceRef.current;
+      if (v.supported && !v.listening) startVoiceRef.current(cur);
+      else {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+        setOpen(true);
+      }
+    };
+    window.addEventListener('ambertube:find', onFind);
+    return () => window.removeEventListener('ambertube:find', onFind);
+  }, []);
 
   // "/" or Ctrl/Cmd+K focuses search
   useEffect(() => {

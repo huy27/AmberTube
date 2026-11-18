@@ -86,6 +86,20 @@ const TimeCtx = createContext<PlayerTime>({ currentTime: 0, duration: 0, sleepRe
 const ALL = [...SPEEDS] as number[];
 const defaultRates = (t: Track | null): number[] => (!t ? ALL : t.provider === 'youtube' && t.isLive ? [1] : ALL);
 
+/** Lock Screen artwork: several sizes for YouTube videos, the stored thumbnail otherwise. */
+function artworkFor(t: Track): MediaImage[] {
+  if (t.videoId) {
+    return [
+      { src: `https://i.ytimg.com/vi/${t.videoId}/mqdefault.jpg`, sizes: '320x180', type: 'image/jpeg' },
+      { src: `https://i.ytimg.com/vi/${t.videoId}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' },
+      { src: `https://i.ytimg.com/vi/${t.videoId}/sddefault.jpg`, sizes: '640x480', type: 'image/jpeg' },
+    ];
+  }
+  return t.thumbnail ? [{ src: t.thumbnail, sizes: '320x180', type: 'image/jpeg' }] : [];
+}
+
+const carMode = () => document.documentElement.classList.contains('mode-car');
+
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const { pushHistory, settings } = useLibrary();
   const { recordListen } = useListeningStore();
@@ -425,8 +439,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const appendRecommendations = useCallback((picks: { track: Track; reason: string }[]) => {
     const q = live.current.queue;
-    const { state, added } = Q.appendAuto(q, picks.map((p) => p.track).filter((t) => !live.current.failed.has(t.id)));
+    const res = Q.appendAuto(q, picks.map((p) => p.track).filter((t) => !live.current.failed.has(t.id)));
+    const { added } = res;
     if (!added.length) return 0;
+    const state = Q.trimPlayed(res.state); // long autoplay sessions: keep the queue (and saved state) bounded
     live.current.queue = state;
     setQueueState(state);
     const m = new Map(autoRef.current);
@@ -504,7 +520,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const { isPlaying: playing, sleepTimer: sleep } = live.current;
       if (playing && loadedId.current) {
         const pos = activeEngineObj()?.getCurrentTime() ?? 0;
-        setCurrentTime(pos);
+        // Car View performance mode: the UI only shows whole seconds → 1 render/s instead of 4
+        if (!carMode() || Math.floor(pos) !== Math.floor(live.current.currentTime)) setCurrentTime(pos);
         if (session.current && session.current.track.id === loadedId.current) session.current.maxPos = Math.max(session.current.maxPos, pos);
       }
       if (sleep?.kind === 'time') {
@@ -526,13 +543,39 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(id);
   }, [queue, volume, muted, rate, shuffle, repeat, persistNow]);
 
+  // ---- page lifecycle (phones: app switch, screen lock, back/forward cache) -------------------
+  // Hiding the page never pauses or destroys anything: the media keeps going wherever the browser allows.
+  // On return, the UI is re-synchronised with what the media is *actually* doing, because timers and
+  // events may not have run while hidden (e.g. iOS pauses the YouTube video when the screen locks).
   useEffect(() => {
-    const onHide = () => {
-      finalizeListen('closed');
-      persistNow();
+    const sync = () => {
+      const t = live.current.track;
+      const eng = activeEngineObj();
+      if (!t || !eng || loadedId.current !== t.id) return;
+      const actual = eng.isActuallyPlaying();
+      if (actual !== live.current.isPlaying) setIsPlaying(actual);
+      if (!actual) setBuffering(false);
+      const pos = eng.getCurrentTime();
+      if (Number.isFinite(pos)) setCurrentTime(pos);
     };
+    const onVisibility = () => {
+      if (document.hidden) persistNow();
+      else sync();
+    };
+    const onHide = (e: PageTransitionEvent) => {
+      persistNow();
+      // the page is really going away (not just into the back/forward cache): close the listening session
+      if (!e.persisted) finalizeListen('closed');
+    };
+    const onShow = (e: PageTransitionEvent) => e.persisted && sync();
+    document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', onHide);
-    return () => window.removeEventListener('pagehide', onHide);
+    window.addEventListener('pageshow', onShow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onHide);
+      window.removeEventListener('pageshow', onShow);
+    };
   }, [persistNow, finalizeListen]);
 
   // count only time actually spent playing
@@ -547,19 +590,59 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [isPlaying, track?.id]);
 
   // ---- OS media keys ---------------------------------------------------------------------
+  // Media Session = Lock Screen / Control Center / headset metadata and buttons. It does not by itself keep
+  // audio playing in the background — that depends on the browser and the playback provider.
+  const ms = typeof navigator !== 'undefined' && 'mediaSession' in navigator ? navigator.mediaSession : null;
   useEffect(() => {
-    if (!('mediaSession' in navigator) || !track) return;
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: track.title,
-      artist: track.channel,
-      album: 'AmberTube',
-      artwork: track.thumbnail ? [{ src: track.thumbnail, sizes: '320x180', type: 'image/jpeg' }] : [],
-    });
-    navigator.mediaSession.setActionHandler('play', play);
-    navigator.mediaSession.setActionHandler('pause', pause);
-    navigator.mediaSession.setActionHandler('previoustrack', prev);
-    navigator.mediaSession.setActionHandler('nexttrack', next);
-  }, [track, play, pause, prev, next]);
+    if (!ms) return;
+    if (!track) {
+      ms.metadata = null;
+      return;
+    }
+    try {
+      ms.metadata = new MediaMetadata({ title: track.title, artist: track.channel, album: 'AmberTube', artwork: artworkFor(track) });
+    } catch {
+      /* MediaMetadata unsupported */
+    }
+  }, [ms, track]);
+  useEffect(() => {
+    if (ms) ms.playbackState = !track ? 'none' : isPlaying ? 'playing' : 'paused';
+  }, [ms, track, isPlaying]);
+  useEffect(() => {
+    if (!ms) return;
+    const set = (action: MediaSessionAction, handler: MediaSessionActionHandler | null) => {
+      try {
+        ms.setActionHandler(action, handler);
+      } catch {
+        /* action not supported by this browser */
+      }
+    };
+    const rel = (d: number) => seek(Math.max(0, live.current.currentTime + d));
+    set('play', () => play());
+    set('pause', () => pause());
+    set('previoustrack', () => prev());
+    set('nexttrack', () => next());
+    set('seekto', (d) => d.seekTime != null && seek(d.seekTime));
+    set('seekbackward', (d) => rel(-(d.seekOffset || 10)));
+    set('seekforward', (d) => rel(d.seekOffset || 10));
+    set('stop', () => pause());
+  }, [ms, play, pause, prev, next, seek]);
+  // position for the Lock Screen scrubber: set on track/duration/play-state changes and after seeks;
+  // the OS extrapolates in between, so no timer is needed while the page is hidden
+  const lastPosSync = useRef(0);
+  useEffect(() => {
+    if (!ms?.setPositionState) return;
+    const d = duration || track?.duration || 0;
+    if (!track || track.isLive || !(d > 0)) return;
+    const jumped = Math.abs(currentTime - lastPosSync.current) > 3; // a seek, not normal progress
+    lastPosSync.current = currentTime;
+    if (!jumped && isPlaying && !document.hidden) return;
+    try {
+      ms.setPositionState({ duration: d, playbackRate: isPlaying ? effectiveRate : 1, position: Math.min(d, Math.max(0, currentTime)) });
+    } catch {
+      /* invalid state while loading */
+    }
+  }, [ms, track, duration, isPlaying, currentTime, effectiveRate]);
 
   const ytHostRef = useCallback((el: HTMLDivElement | null) => {
     ytHost.current = el;

@@ -8,11 +8,13 @@ import LyricsPanel from './components/LyricsPanel';
 import YouTubeHost from './components/YouTubeHost';
 import HomePage from './pages/HomePage';
 import SearchPage from './pages/SearchPage';
-import LibraryPage from './pages/LibraryPage';
-import HistoryPage from './pages/HistoryPage';
-import { PlaylistsPage, PlaylistDetailPage } from './pages/PlaylistsPage';
-import DownloadsPage from './pages/DownloadsPage';
-import SettingsPage from './pages/SettingsPage';
+// secondary pages are split out of the startup bundle (Home, Search and the player load first)
+const LibraryPage = lazy(() => import('./pages/LibraryPage'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
+const PlaylistsPage = lazy(() => import('./pages/PlaylistsPage').then((m) => ({ default: m.PlaylistsPage })));
+const PlaylistDetailPage = lazy(() => import('./pages/PlaylistsPage').then((m) => ({ default: m.PlaylistDetailPage })));
+const DownloadsPage = lazy(() => import('./pages/DownloadsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 import { ToastProvider } from './context/ToastContext';
 import { LibraryProvider } from './context/LibraryContext';
 import { PlayerProvider } from './context/PlayerContext';
@@ -48,6 +50,7 @@ function Shell() {
         <TopBar />
         <CarSuggestionBanner />
         <div className="main__scroll" ref={scroller}>
+          <Suspense fallback={<div className="page page--loading" aria-busy="true"><div className="sk sk--line" style={{ width: 220, height: 28 }} /></div>}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
@@ -59,6 +62,7 @@ function Shell() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </div>
         <QueuePanel />
         <LyricsPanel />

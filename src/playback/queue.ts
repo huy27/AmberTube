@@ -166,4 +166,11 @@ export function removeUpcoming(q: QueueState, pred: (t: Track) => boolean): Queu
   return items.length === q.items.length ? q : withCurrent(items, cur?.id);
 }
 
+/** Drop the oldest already-played items so at most `keep` remain before the current one. */
+export function trimPlayed(q: QueueState, keep = 50): QueueState {
+  const drop = q.index - keep;
+  if (drop <= 0) return q;
+  return { items: q.items.slice(drop), index: q.index - drop };
+}
+
 export const upcomingCount = (q: QueueState): number => Math.max(0, q.items.length - q.index - 1);

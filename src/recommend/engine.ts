@@ -125,7 +125,30 @@ function relate(p: Profile, a: string, b: string, w: number) {
   }
 }
 
+// One recommendation pass (Home shelves, a radio, an autoplay refill) asks for the profile and the
+// de-duplicated pool several times with the same inputs — compute each once per Inputs object.
+const profileCache = new WeakMap<Inputs, Profile>();
+const poolCache = new WeakMap<Inputs, Track[]>();
+
+/** Candidate pool without blocked/disliked music, one representative upload per song (cached per inputs). */
+function cleanPool(inp: Inputs): Track[] {
+  let pool = poolCache.get(inp);
+  if (!pool) {
+    pool = dedupeSongs(inp.pool.filter((t) => !isExcluded(t, inp.feedback, inp.now)));
+    poolCache.set(inp, pool);
+  }
+  return pool;
+}
+
 export function buildProfile(inp: Inputs): Profile {
+  const cached = profileCache.get(inp);
+  if (cached) return cached;
+  const p = computeProfile(inp);
+  profileCache.set(inp, p);
+  return p;
+}
+
+function computeProfile(inp: Inputs): Profile {
   const p: Profile = {
     songs: new Map(), genre: new Map(), artist: new Map(), lang: new Map(), favArtists: new Set(), favGenres: new Map(), favSongs: inp.favorites,
     related: new Map(), artistGenres: new Map(), knownArtists: new Set(), longListener: false, evidence: 0,
@@ -422,7 +445,7 @@ export function contextPicks(ctx: RecoContext, inp: Inputs, n: number, opts: Pic
   // just played (last 30 min) is never repeated; played in the last 3 h only fills in when nothing else fits
   const recentPlays = inp.events.filter((e) => inp.now - e.at < 30 * 60_000).map((e) => e.track);
   const lastHours = inp.events.filter((e) => inp.now - e.at < 3 * 3600_000).map((e) => e.track);
-  let pool = dedupeSongs(inp.pool.filter((t) => !isExcluded(t, inp.feedback, inp.now) && !opts.exclude?.has(t.id)));
+  let pool = opts.exclude ? cleanPool(inp).filter((t) => !opts.exclude!.has(t.id)) : cleanPool(inp);
   const seed = seedFor(ctx, inp, p, pool);
   pool = pool.filter((t) => valid(t, seed) && !excluded.some((x) => isSameSong(x, t)) && !recentPlays.some((x) => isSameSong(x, t)));
 
@@ -508,6 +531,9 @@ export interface Recommendations {
   continueListening: Track[];
 }
 
+/** Placeholder while the first pass is computed (after the app shell has painted). */
+export const EMPTY_RECS: Recommendations = { coldStart: false, madeForYou: [], because: null, dailyMix: [], discoverWeekly: [], similarArtists: [], continueListening: [] };
+
 function seeded(seed: string): () => number {
   let h = 2166136261;
   for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
@@ -562,7 +588,7 @@ export function recommend(inp: Inputs): Recommendations {
   // Similar artists: not yet listened to, close in style/language or related to artists you play
   const mySeed = seedFor({ type: 'my' }, inp, p, inp.pool);
   const byArtist = new Map<string, { name: string; sample: Track; score: number; n: number }>();
-  for (const t of dedupeSongs(inp.pool.filter((x) => !isExcluded(x, fb, inp.now)))) {
+  for (const t of cleanPool(inp)) {
     const art = artistOf(t);
     if (!art || p.knownArtists.has(art)) continue;
     const c = components(t, mySeed, p);

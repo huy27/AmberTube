@@ -100,13 +100,24 @@ export function VolumeControl() {
   );
 }
 
+// The playback position changes 4×/s: only these two small components subscribe to it,
+// so the rest of the player bar doesn't re-render while music plays.
+function TimeText() {
+  const { time, dur } = useProgress();
+  return <>{formatTime(time)} / {formatTime(dur)}</>;
+}
+
+function ProgressVisualizer(props: Omit<Parameters<typeof Visualizer>[0], 'variant' | 'progress'>) {
+  const { progress } = useProgress();
+  return <Visualizer variant="compact" progress={progress} {...props} />;
+}
+
 export default function PlayerBar() {
   const p = usePlayer();
   const { isSaved, toggleSaved, settings, updateSettings } = useLibrary();
   const ui = useUI();
   const openFocus = useOpenFocus();
   const { autoplay, setAutoplay } = useRecommendations();
-  const { time, dur, progress } = useProgress();
   const { track } = p;
 
   return (
@@ -126,7 +137,7 @@ export default function PlayerBar() {
               <div className="player__time">
                 {p.buffering && p.isPlaying
                   ? <span className="player__loading"><Loader2 size={12} className="spin" /> Đang tải…</span>
-                  : track.isLive ? <span className="live-pill">LIVE</span> : `${formatTime(time)} / ${formatTime(dur)}`}
+                  : track.isLive ? <span className="live-pill">LIVE</span> : <TimeText />}
               </div>
             </div>
             <IconBtn label={isSaved(track.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'} active={isSaved(track.id)} className="player__like" onClick={() => toggleSaved(track)}>
@@ -145,12 +156,10 @@ export default function PlayerBar() {
       </div>
 
       <div className="player__center">
-        <Visualizer
-          variant="compact"
+        <ProgressVisualizer
           mode={settings.visualizer}
           playing={p.isPlaying && !p.buffering}
           getAnalyser={p.getAnalyser}
-          progress={progress}
           seed={track?.id || 'idle'}
           onToggleMode={() => updateSettings({ visualizer: settings.visualizer === 'wave' ? 'spectrum' : 'wave' })}
         />

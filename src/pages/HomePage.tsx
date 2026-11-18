@@ -60,6 +60,16 @@ function MyRadioTile() {
   );
 }
 
+/** Placeholder for the personal shelves while recommendations are computed (keeps the layout stable). */
+function ShelfSkeleton() {
+  return (
+    <section className="shelf" aria-busy="true" aria-label="Đang tải gợi ý">
+      <div className="sk sk--line" style={{ width: 180, height: 20, marginTop: 8 }} />
+      <div className="shelf__row">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="sk shelf-sk" />)}</div>
+    </section>
+  );
+}
+
 function ColdStart() {
   const { feedback, setStyles } = useListeningStore();
   const { trending, trendingSource } = useRecommendations();
@@ -97,7 +107,7 @@ function ColdStart() {
 export default function HomePage() {
   const { history } = useLibrary();
   const { compact } = useDisplayMode();
-  const { recs } = useRecommendations();
+  const { recs, recsReady } = useRecommendations();
   const navigate = useNavigate();
   const car = compact;
   const recent: Track[] = [...recs.continueListening];
@@ -112,10 +122,11 @@ export default function HomePage() {
     </Shelf>
   );
 
-  const personal = recs.coldStart ? <ColdStart /> : (
+  const personal = !recsReady ? <ShelfSkeleton /> : recs.coldStart ? <ColdStart /> : (
     <>
       {(recs.dailyMix.length > 0 || radioSeed) && (
         <div className="mix-row">
+          {!recsReady && history.length > 0 && <div className="mix-card mix-card--sk sk" aria-hidden="true" />}
           {recs.dailyMix.length > 0 && <DailyMixCard mix={recs.dailyMix} />}
           {radioSeed && <RadioTile seed={radioSeed} />}
           <MyRadioTile />
@@ -156,6 +167,7 @@ export default function HomePage() {
     // Car View: music first — continue listening, daily mix / radio, moods, then a few suggestions
     const mixRow = !recs.coldStart && (recs.dailyMix.length > 0 || radioSeed) && (
       <div className="mix-row">
+        {!recsReady && history.length > 0 && <div className="mix-card mix-card--sk sk" aria-hidden="true" />}
         {recs.dailyMix.length > 0 && <DailyMixCard mix={recs.dailyMix} />}
         {radioSeed && <RadioTile seed={radioSeed} />}
         <MyRadioTile />
@@ -167,7 +179,7 @@ export default function HomePage() {
         {mixRow}
         <h2 className="section-title">Tâm trạng &amp; Khám phá</h2>
         <MoodGrid />
-        {recs.coldStart ? <ColdStart /> : recs.madeForYou.length > 0 && (
+        {!recsReady ? <ShelfSkeleton /> : recs.coldStart ? <ColdStart /> : recs.madeForYou.length > 0 && (
           <Shelf id="sh-mfy" title="Dành cho bạn">
             {recs.madeForYou.slice(0, 6).map((t) => <RecoCard key={t.id} track={t} list={recs.madeForYou} />)}
           </Shelf>

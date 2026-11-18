@@ -44,6 +44,7 @@ export default function Visualizer({ mode, variant, playing, getAnalyser, progre
   const props = useRef({ mode, playing, progress, getAnalyser });
   props.current = { mode, playing, progress, getAnalyser };
   const hasReal = useRef(false);
+  const kick = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -70,7 +71,14 @@ export default function Visualizer({ mode, variant, playing, getAnalyser, progre
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
 
+    let lastFrame = 0;
     const draw = (now: number) => {
+      // decorative bars don't need 60 fps: draw at ~30 fps to halve the main-thread cost
+      if (now - lastFrame < 30 && !hasReal.current) {
+        raf = requestAnimationFrame(draw);
+        return;
+      }
+      lastFrame = now;
       const { mode: m, playing: on, progress: prog, getAnalyser: ga } = props.current;
       const t = now / 1000;
       const dt = Math.min(0.1, (now - last) / 1000);
@@ -165,14 +173,27 @@ export default function Visualizer({ mode, variant, playing, getAnalyser, progre
         ctx.shadowBlur = 0;
       }
 
-      if (!reduceMotion || on) raf = requestAnimationFrame(draw);
+      // idle: keep easing the bars down for a moment, then stop drawing until playback starts again
+      const settled = !on && level.every((v, i) => Math.abs(v - target[i]) < 0.004);
+      if ((!reduceMotion || on) && !settled && !document.hidden) raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
+    const onVis = () => {
+      if (document.hidden) return;
+      cancelAnimationFrame(raf);
+      last = performance.now();
+      raf = requestAnimationFrame(draw);
+    };
+    kick.current = onVis; // redraw after a mode change even when the idle loop has stopped
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      document.removeEventListener('visibilitychange', onVis);
     };
   }, [variant, seed, playing]);
+
+  useEffect(() => kick.current?.(), [mode]);
 
   const label = `Hiệu ứng ${mode === 'spectrum' ? 'phổ tần' : 'dạng sóng'} — bấm để đổi`;
   return (

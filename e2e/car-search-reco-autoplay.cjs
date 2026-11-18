@@ -215,7 +215,8 @@ const queueIds = (p) => p.$$eval('.queue__item .queue__title', (e) => e.map((x) 
     const before = q.length;
     const toSkip = q.length - 3;
     for (let i = 0; i < toSkip; i++) { await p.click('button[aria-label^="Bài tiếp theo"]'); await p.clock.runFor(400); }
-    await p.clock.runFor(1500);
+    // refill waits ~2.5 s (idle time) after the new song starts, so it never competes with track loading
+    await p.clock.runFor(4000); await p.waitForTimeout(300); await p.clock.runFor(500);
     q = await queueIds(p);
     const remaining = await p.$$eval('.queue__item', (els) => els.length - 1 - els.findIndex((e) => e.classList.contains('is-current')));
     check('queue refilled when ~2 songs remain', remaining > 2, `${remaining} upcoming (queue ${before} → ${q.length})`);

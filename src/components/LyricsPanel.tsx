@@ -55,7 +55,7 @@ export default function LyricsPanel() {
 
       {!track ? (
         <LyricsMessage title="Chưa phát bài nào">Phát một bài để xem lời ở đây.</LyricsMessage>
-      ) : state.status === 'loading' || state.status === 'idle' ? (
+      ) : !open ? null /* closed: no skeleton shimmer running off-screen */ : state.status === 'loading' || state.status === 'idle' ? (
         <div className="lyrics__loading" aria-busy="true">{[70, 55, 80, 45, 65].map((w, i) => <div key={i} className="sk sk--line" style={{ width: `${w}%` }} />)}</div>
       ) : state.status === 'error' ? (
         <LyricsMessage title="Không tải được lời bài hát">{state.message}</LyricsMessage>

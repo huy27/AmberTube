@@ -2,8 +2,17 @@ import type { Track } from '../../types';
 import { ALL_RATES, type EngineEvents, type LoadOptions, type PlaybackEngine } from './types';
 
 /**
+ * iPhone / iPad: when an <audio> element is routed through Web Audio (createMediaElementSource), its
+ * sound goes through the AudioContext, and iOS interrupts that context when Safari is hidden or the
+ * screen locks — the file keeps "playing" but is silent (WebKit bugs 276016, 281566). So on iOS the
+ * element plays directly (background playback + Lock Screen work) and the visualizer is decorative.
+ */
+const IS_IOS = typeof navigator !== 'undefined' &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+
+/**
  * Plays local audio files with an <audio> element. Because the file is the user's own, its audio
- * can be routed through Web Audio for real spectrum/waveform analysis.
+ * can be routed through Web Audio for real spectrum/waveform analysis (not on iOS, see above).
  */
 export class HtmlAudioEngine implements PlaybackEngine {
   readonly id = 'local' as const;
@@ -34,7 +43,7 @@ export class HtmlAudioEngine implements PlaybackEngine {
   }
 
   private ensureGraph() {
-    if (this.ctx) return;
+    if (this.ctx || IS_IOS) return;
     const Ctor = window.AudioContext ?? window.webkitAudioContext;
     if (!Ctor) return;
     try {
@@ -67,7 +76,7 @@ export class HtmlAudioEngine implements PlaybackEngine {
 
   play(): void {
     this.ensureGraph();
-    void this.ctx?.resume();
+    if (this.ctx?.state === 'suspended') void this.ctx.resume();
     this.audio.play().catch((err: DOMException) => {
       if (err.name === 'NotAllowedError') {
         this.events.onBuffering(false);
@@ -103,6 +112,10 @@ export class HtmlAudioEngine implements PlaybackEngine {
 
   setRate(rate: number): void {
     this.audio.playbackRate = rate;
+  }
+
+  isActuallyPlaying(): boolean {
+    return !this.audio.paused && !this.audio.ended;
   }
 
   getAnalyser(): AnalyserNode | null {

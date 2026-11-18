@@ -62,7 +62,8 @@ export class YouTubeEngine implements PlaybackEngine {
     this.player = new api.Player(mount, {
       width: '100%',
       height: '100%',
-      playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, origin: window.location.origin },
+      // audio-only use: no player controls/annotations to render inside the (hidden) iframe
+      playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, origin: window.location.origin },
       events: {
         onReady: () => {
           this.ready = true;
@@ -242,6 +243,14 @@ export class YouTubeEngine implements PlaybackEngine {
   seek(seconds: number): void {
     this.endedFor = null; // e.g. repeat-one restarts the same video
     if (this.ready && this.current) this.player!.seekTo(seconds, true);
+  }
+
+  isActuallyPlaying(): boolean {
+    try {
+      return Boolean(this.ready && this.current && this.player!.getPlayerState() === STATE.PLAYING);
+    } catch {
+      return false;
+    }
   }
 
   getCurrentTime(): number {

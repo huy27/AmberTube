@@ -179,6 +179,94 @@ Endpoint cần nhận `GET ?title=&artist=&duration=` và trả về `{ lrc?, pl
 
 Phân tích âm thanh thật (AnalyserNode) chỉ dùng cho file trên máy, vì đó là luồng âm thanh ứng dụng được phép truy cập. Với YouTube và bài demo, hiệu ứng chỉ là hoạt ảnh trang trí. Ứng dụng không cố truy cập âm thanh được bảo vệ của YouTube.
 
+## Car View: chế độ tiết kiệm hiệu năng
+
+Màn hình xe (ví dụ VinFast VF5) có CPU/GPU yếu, và đang phải chạy cùng lúc trình phát YouTube. Vì vậy Car View tự bật chế độ nhẹ:
+
+- **Tắt hiệu ứng chuyển động:**
+  - equalizer đứng yên;
+  - không có vệt sáng chạy trên khung chờ tải;
+  - không có animation khi chuyển màn hình;
+  - Focus Mode bỏ lớp nền mờ và các đốm sáng trôi.
+- **Đồng hồ phát** chỉ cập nhật giao diện 1 lần/giây (máy tính là 4 lần/giây).
+- **Áp dụng cho mọi chế độ:**
+  - equalizer chỉ dùng `transform`, không bắt trình duyệt tính lại bố cục mỗi khung hình;
+  - bảng Lời bài hát và Hàng đợi khi đóng không còn chạy animation ngầm;
+  - gợi ý trên Trang chủ được tính lúc trình duyệt rảnh, không tính đúng lúc vừa chuyển bài;
+  - Smart Autoplay bổ sung bài khoảng 2,5 giây sau khi bài mới đã phát;
+  - hàng đợi chỉ giữ 50 bài đã phát gần nhất;
+  - trình phát YouTube chỉ có một thực thể, ẩn bảng điều khiển, chú thích và nút toàn màn hình.
+
+Đo trên máy giả lập CPU chậm 6 lần (`e2e/perf-car-profile.cjs`, 2 phút phát nhạc liên tục ở Car View):
+
+| | Trước | Sau |
+| --- | --- | --- |
+| Thời gian main thread bận (ms mỗi giây) | 489 | 46 |
+| Số lần tính lại bố cục (layout) mỗi giây | 61,6 | 1,3 |
+| Số lần React render mỗi giây | 4,2 | 1,3 |
+| Số tác vụ dài (> 50 ms), tổng thời gian | 6 tác vụ, 392 ms | 2 tác vụ, 113 ms |
+| Số thực thể trình phát YouTube | 1 | 1 |
+
+## Hiệu năng tải trang (đo bằng `e2e/perf-web-vitals.cjs`)
+
+Điều kiện đo: mạng ~1,6 Mbps với độ trễ 150 ms, CPU chậm 4 lần, người dùng lâu năm (1.500 lượt nghe, 25 lần tìm đã lưu, 300 mục lịch sử). Số liệu là trung vị của 3 lần đo.
+
+| Desktop 1360×860 | Trước | Sau |
+| --- | --- | --- |
+| FCP / LCP | 1,94 s | 1,66 s |
+| Tổng thời gian chặn main thread khi khởi động (TBT) | 604 ms | 341 ms |
+| Tác vụ dài nhất khi khởi động | 510 ms | 269 ms |
+| INP (thao tác chậm nhất) | 424 ms | 176 ms |
+| JS khởi động | 394 KB | 379 KB (các trang phụ tách riêng) |
+| Gọi API khi gõ nhanh | 0 | 0 |
+
+| Car View 800×480 | Trước | Sau |
+| --- | --- | --- |
+| FCP / LCP | 1,91 s | 1,56 s |
+| TBT khi khởi động | 614 ms | 266 ms |
+| CLS | 0,001 (0,089 khi mới thêm khung chờ) | 0,001 |
+| INP | 120 ms | 88 ms |
+
+**Những thay đổi chính:**
+- **Gợi ý cá nhân không còn tính đồng bộ khi mở app.** Lượt tính đầu tiên chạy lúc trình duyệt rảnh, trong lúc đó Trang chủ hiện khung chờ giữ chỗ để bố cục không bị nhảy.
+- **Bộ gợi ý nhanh hơn:**
+  - hàm chuẩn hóa chữ được ghi nhớ kết quả;
+  - các biểu thức lọc tiêu đề được biên dịch một lần;
+  - khử trùng lặp bài hát chỉ so trong cùng nhóm tên bài, trước đây so với mọi nhóm;
+  - hồ sơ nghe nhạc và danh sách ứng viên được tính một lần cho mỗi lượt gợi ý.
+- **Tách mã:** Thư viện, Lịch sử, Playlist, Tải xuống và Cài đặt chỉ được tải khi mở.
+- **Trình phát trên máy tính:**
+  - chỉ ô thời gian và hiệu ứng sóng cập nhật 4 lần/giây, phần còn lại của thanh phát không render lại;
+  - hiệu ứng sóng trang trí vẽ khoảng 30 khung hình/giây và dừng hẳn khi không phát nhạc.
+- **Ảnh thu nhỏ:** trên màn hình thường, danh sách bài dùng ảnh 120×90 thay cho 320×180.
+
+Thử điều hướng 400 lần giữa các trang trong khi phát nhạc (`e2e/perf-memory-nav.cjs`): số event listener không đổi, bộ nhớ tăng rồi ổn định, không có dấu hiệu rò rỉ.
+
+## Phát nền trên iPhone (Safari)
+
+- **Bài từ YouTube** phát qua YouTube IFrame Player, mà trình phát này thực chất là một `<video>` bên trong iframe của YouTube. Khi khóa màn hình hoặc chuyển ứng dụng, Safari trên iOS **dừng video**, và app không điều khiển được thành phần media trong iframe đó. Vì vậy nhạc YouTube **không phát tiếp khi khóa màn hình**, và cũng không tự chuyển sang bài kế khi màn hình đang khóa.
+  - Đây là giới hạn của nguồn phát. App không trích xuất luồng âm thanh và không dùng mẹo "âm thanh im lặng" để lách.
+  - Muốn nghe nền nhạc YouTube, cách hợp lệ là dùng ứng dụng YouTube/YouTube Music với gói Premium.
+- **File nhạc trên máy (Thư viện › File trên máy)** phát bằng `<audio>`, nên vẫn phát khi khóa màn hình. Trên iOS, app **không** đưa âm thanh qua Web Audio, vì iOS ngắt AudioContext khi khóa màn hình làm file bị câm. Do đó hiệu ứng sóng nhạc ở đây chỉ là hoạt ảnh trang trí.
+- **Màn hình khóa (Media Session):** hiện tên bài, nghệ sĩ và ảnh bìa nhiều cỡ. Các nút phát, tạm dừng, bài trước, bài sau, tua và kéo thanh thời gian đều dùng được, kèm trạng thái phát và vị trí phát.
+- **Khi quay lại Safari:** app đọc trạng thái thật của trình phát để giao diện không báo "đang phát" khi thực tế đã dừng. App không bao giờ tự tạm dừng chỉ vì trang bị ẩn.
+
+## Tìm kiếm bằng giọng nói và CarPlay
+
+- **Trước khi bật micro:** app tạm dừng nhạc. Sau khi tìm xong, nhạc **vẫn dừng** cho tới khi bạn bấm Phát, và Smart Autoplay không tự chuyển bài.
+- **Phiên nhận dạng luôn được đóng hẳn** (`abort()` và gỡ mọi callback) trong các tình huống:
+  - đã nghe ra câu tìm;
+  - lỗi hoặc bị từ chối quyền micro;
+  - người dùng hủy;
+  - quá 12 giây;
+  - chuyển trang, trang bị ẩn hoặc khóa màn hình;
+  - component bị gỡ.
+
+  Không bao giờ có hai phiên chạy cùng lúc, và callback của phiên cũ bị bỏ qua.
+- **App không dùng `getUserMedia`:** nhận dạng giọng nói do trình duyệt tự giữ micro, nên không có MediaStreamTrack nào để dừng.
+- **Trả lại chế độ phát nhạc:** sau khi nhả micro, nếu Safari có Audio Session API (`navigator.audioSession`, từ Safari 16.4), app đặt kiểu phiên âm thanh về `playback` rồi `auto`. Mục đích là để iOS rời chế độ thu âm, tránh việc CarPlay kẹt ở chế độ thoại.
+- **Giới hạn:** web không điều khiển được AVAudioSession. Nếu iOS hoặc CarPlay vẫn giữ chế độ thoại thì chỉ ứng dụng native mới sửa triệt để. Cách làm: dùng SFSpeechRecognizer, rồi `AVAudioSession.setActive(false, options: .notifyOthersOnDeactivation)` và chuyển category về `.playback` sau khi nhận dạng xong, ví dụ qua plugin Capacitor.
+
 ## Phát YouTube
 
 Video YouTube phát qua **YouTube IFrame Player API** chính thức, ở chế độ **chỉ nghe nhạc**: trình phát nằm ngoài màn hình (component `YouTubeHost`).
@@ -209,7 +297,9 @@ Backend nên chuyển đổi từ **file gốc bạn sở hữu**, không tải 
 
 - `npm test`: 64 unit test cho hàng đợi, tốc độ, lưu trạng thái, parser LRC, Pomodoro, thống kê, cài đặt, tìm kiếm, nhận diện bài hát (`identity.test.ts`) và thuật toán gợi ý.
   - Phần gợi ý kiểm tra: cùng bài khác ID video, Audio/MV/Lyrics, Remix/Live, bài khác cùng nghệ sĩ, cùng phong cách khác nghệ sĩ, đa dạng nghệ sĩ, bài vừa nghe, bài không thích, chống trùng khi thêm vào hàng đợi, ít/không có ứng viên, và làm mới nhiều lần.
-- `e2e/api-mode-autoplay.cjs`, `e2e/autoplay-advance.cjs` và `e2e/slow-network.cjs` (mạng chậm): kiểm thử Autoplay ở chế độ có API key, với YouTube API được giả lập ở tầng mạng. Xem cách chạy ở đầu file. Các trường hợp tự chuyển bài được kiểm tra:
+- `e2e/voice-mic-release.cjs`: kiểm tra micro được giải phóng ở mọi tình huống kết thúc tìm kiếm bằng giọng nói, nhạc tạm dừng và không tự phát lại.
+- `e2e/perf-web-vitals.cjs`, `e2e/perf-car-profile.cjs`, `e2e/perf-memory-nav.cjs`: đo hiệu năng.
+- `e2e/api-mode-autoplay.cjs`, `e2e/autoplay-advance.cjs`, `e2e/slow-network.cjs` (mạng chậm) và `e2e/lifecycle-media-session.cjs` (Media Session, đồng bộ khi quay lại trang, không dùng Web Audio cho file trên iOS): kiểm thử Autoplay ở chế độ có API key, với YouTube API được giả lập ở tầng mạng. Xem cách chạy ở đầu file. Các trường hợp tự chuyển bài được kiểm tra:
   - khi có sự kiện hết bài;
   - khi mất sự kiện hết bài;
   - khi cài đặt cũ "Tự động phát" đang tắt.

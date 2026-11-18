@@ -17,9 +17,9 @@ const MOCK = () => {
     const r = window.__rec;
     const res = [{ 0: { transcript: text, confidence: 0.9 }, length: 1, isFinal: final }];
     r.onresult({ resultIndex: 0, results: Object.assign(res, { length: 1 }) });
-    if (final) r.onend();
+    if (final && r.onend) r.onend(); // the app may already have released the session
   };
-  window.__fail = (code) => { const r = window.__rec; r.onerror({ error: code }); r.onend(); };
+  window.__fail = (code) => { const r = window.__rec; r.onerror && r.onerror({ error: code }); r.onend && r.onend(); };
 };
 
 (async () => {
