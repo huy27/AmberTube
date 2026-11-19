@@ -13,7 +13,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useUI } from '../context/UIContext';
 import { useOpenFocus } from '../hooks/useFocusNavigation';
-import { useVideoAvailable } from './YouTubeHost';
+import { useVideoAvailable } from '../hooks/useVideoAvailable';
 import { formatTime } from '../services/format';
 
 export const REPEAT_LABEL = { off: 'tắt', all: 'tất cả', one: 'một bài' } as const;

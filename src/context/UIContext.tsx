@@ -14,17 +14,15 @@ interface UIApi {
   /** desktop: show the YouTube video above the player bar (remembered on this device) */
   videoOpen: boolean;
   toggleVideo(on?: boolean): void;
-  videoLarge: boolean;
-  toggleVideoLarge(): void;
 }
 
 const VIDEO_KEY = 'ambertube:video';
-function readVideo(): { open: boolean; large: boolean } {
+function readVideo(): { open: boolean } {
   try {
     const v = JSON.parse(localStorage.getItem(VIDEO_KEY) || '{}');
-    return { open: v.open === true, large: v.large === true };
+    return { open: v.open === true };
   } catch {
-    return { open: false, large: false };
+    return { open: false };
   }
 }
 
@@ -44,7 +42,6 @@ export function UIProvider({ children }: { children: ReactNode }) {
     }
   }, [video]);
   const toggleVideo = useCallback((on?: boolean) => setVideo((v) => ({ ...v, open: on ?? !v.open })), []);
-  const toggleVideoLarge = useCallback(() => setVideo((v) => ({ ...v, large: !v.large })), []);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -61,8 +58,8 @@ export function UIProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({
     panel, setPanel, togglePanel, isFullscreen, toggleFullscreen, nowPlaying, setNowPlaying,
-    videoOpen: video.open, toggleVideo, videoLarge: video.large, toggleVideoLarge,
-  }), [panel, togglePanel, isFullscreen, toggleFullscreen, nowPlaying, video, toggleVideo, toggleVideoLarge]);
+    videoOpen: video.open, toggleVideo,
+  }), [panel, togglePanel, isFullscreen, toggleFullscreen, nowPlaying, video, toggleVideo]);
   return <UICtx.Provider value={value}>{children}</UICtx.Provider>;
 }
 

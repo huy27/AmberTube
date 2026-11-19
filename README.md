@@ -321,8 +321,12 @@ Thử điều hướng 400 lần giữa các trang trong khi phát nhạc (`e2e/
 ## Phát YouTube
 
 **Xem video (giao diện máy tính):**
-- Bấm nút màn hình ▶ trên thanh phát nhạc, hoặc phím **V**, để hiện video trong một cửa sổ nhỏ phía trên thanh phát (360 px, bấm ⤢ để phóng to 640 px).
-- Bấm vào hình để phát / tạm dừng, bấm đúp để phóng to.
+- Bấm nút màn hình ▶ trên thanh phát nhạc, hoặc phím **V**, để hiện video trong một cửa sổ nhỏ (360 px) phía trên thanh phát.
+- Bấm ⛶ hoặc bấm đúp vào video để xem **toàn màn hình**.
+  - Có tên bài, nút phát/tạm dừng, bài trước/sau, trộn bài, lặp lại, thanh tua và thời gian.
+  - Các nút tự ẩn sau 2,5 giây không di chuột.
+  - Thoát bằng **Esc**, nút thu nhỏ hoặc bấm đúp.
+- Bấm vào hình để phát / tạm dừng.
 - Bật/tắt video **không làm ngắt nhạc**: vẫn là trình phát đang chạy, app chỉ đổi chỗ hiển thị.
 - Cửa sổ tự dịch sang trái khi mở hàng đợi hoặc lời bài hát. Máy này nhớ lựa chọn bật/tắt.
 - **Car View không bao giờ hiện video**, để an toàn khi lái xe.

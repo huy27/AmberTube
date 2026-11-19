@@ -505,13 +505,10 @@
 .yt-host { position: fixed; left: -10000px; top: 0; width: 200px; height: 200px; opacity: 0; pointer-events: none; overflow: hidden; }
 .yt-host iframe, .yt-host > * { width: 100%; height: 100%; border: 0; display: block; }
 
-/* Desktop video window: the SAME .yt-host element is shown in place (never moved, so playback never restarts) */
-.yt-host--visible, .video-dock {
-  --vd-w: 360px; --vd-right: 16px; --vd-bottom: calc(var(--player-h) + 12px); --vd-bar: 34px;
-}
-.yt-host--large, .video-dock--large { --vd-w: min(640px, calc(100vw - 32px), calc((100vh - var(--player-h) - 60px) * 16 / 9)); }
+/* Desktop video: the SAME .yt-host element is shown in place (never moved, so playback never restarts) */
+.video-stage { position: static; }
+.yt-host--visible, .video-dock { --vd-w: 360px; --vd-right: 16px; --vd-bottom: calc(var(--player-h) + 12px); --vd-bar: 34px; }
 .yt-host--shift, .video-dock--shift { --vd-right: 376px; }
-.yt-host--large.yt-host--shift, .video-dock--large.video-dock--shift { --vd-w: min(640px, calc(100vw - 408px), calc((100vh - var(--player-h) - 60px) * 16 / 9)); }
 .yt-host--visible {
   left: auto; top: auto; right: var(--vd-right); bottom: var(--vd-bottom);
   width: var(--vd-w); height: calc(var(--vd-w) * 9 / 16); opacity: 1; z-index: 40;
@@ -529,6 +526,26 @@
 .video-dock__title { flex: 1; min-width: 0; font-size: 12.5px; color: var(--text-1b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .video-dock__screen { display: block; width: 100%; aspect-ratio: 16 / 9; background: transparent; border-radius: 0 0 12px 12px; cursor: pointer; }
 .video-dock__screen:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* full screen (Fullscreen API on .video-stage; .video-stage--fill = fallback that fills the window) */
+.video-stage--full { position: fixed; inset: 0; z-index: 300; background: #000; color: #fff; }
+.video-stage--full.is-idle { cursor: none; }
+.yt-host.yt-host--full { left: 0; top: 0; right: 0; bottom: 0; width: 100%; height: 100%; border-radius: 0; z-index: 301; opacity: 1; }
+.video-full__screen { position: fixed; inset: 0; z-index: 302; background: transparent; cursor: pointer; }
+.video-stage--full.is-idle .video-full__screen { cursor: none; }
+.video-full__top, .video-full__bottom { position: fixed; left: 0; right: 0; z-index: 303; transition: opacity 300ms var(--ease); }
+.video-full__top { top: 0; padding: 22px 32px 48px; background: linear-gradient(rgba(0, 0, 0, 0.7), transparent); pointer-events: none; }
+.video-full__id { display: flex; flex-direction: column; gap: 2px; max-width: 70%; }
+.video-full__id strong { font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.video-full__id span { font-size: 14px; color: rgba(255, 255, 255, 0.75); }
+.video-full__bottom { bottom: 0; padding: 48px 32px 22px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); }
+.video-full__progress { display: flex; align-items: center; gap: 14px; }
+.video-full__progress .progress { flex: 1; }
+.video-full__time { font-size: 13px; color: rgba(255, 255, 255, 0.85); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.video-full__row { position: relative; display: flex; justify-content: center; align-items: center; margin-top: 8px; }
+.video-full__row .transport-wrap { margin: 0 auto; }
+.video-full__exit { position: absolute; right: 0; color: #fff; width: 44px; height: 44px; }
+.video-stage--full.is-idle .video-full__top, .video-stage--full.is-idle .video-full__bottom { opacity: 0; pointer-events: none; }
 @keyframes fade-in { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .video-dock { animation: none; } }
 
