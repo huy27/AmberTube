@@ -80,18 +80,18 @@ export default function NowPlaying() {
           <div className="np__extras np__nextcard">
             <span className="np__nextart" aria-hidden="true">{next ? <Artwork track={next} /> : null}</span>
             <div className="np__nexttext">
-              <span className="np__eyebrow">Tiếp theo</span>
+              <span className="np__eyebrow">{autoplay.enabled ? 'Tiếp theo' : 'Tiếp theo (không tự phát)'}</span>
               {next ? (
                 <>
                   <strong className="np__nexttitle" title={next.title}>{next.title}</strong>
                   <span className="np__nextsub" title={p.autoReasons.get(next.id) || undefined}>· {next.channel}</span>
                 </>
               ) : (
-                <span className="np__nextsub">{autoplay.enabled ? 'Tự phát sẽ chọn bài phù hợp' : 'Hết hàng đợi'}</span>
+                <span className="np__nextsub">{autoplay.enabled ? 'Tự động phát sẽ chọn bài phù hợp' : 'Hết bài là dừng'}</span>
               )}
             </div>
-            <button className={`np__auto${autoplay.enabled ? ' is-on' : ''}`} onClick={() => setAutoplay(!autoplay.enabled)} aria-pressed={autoplay.enabled} aria-label="Tự phát bài gợi ý">
-              <InfinityIcon size={18} /><span>Tự phát</span>
+            <button className={`np__auto${autoplay.enabled ? ' is-on' : ''}`} onClick={() => setAutoplay(!autoplay.enabled)} aria-pressed={autoplay.enabled} aria-label={autoplay.enabled ? 'Tự động phát: bật' : 'Tự động phát: tắt (hết bài là dừng)'}>
+              <InfinityIcon size={18} /><span>Tự động phát</span>
             </button>
           </div>
         </div>

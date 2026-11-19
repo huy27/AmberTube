@@ -11,9 +11,9 @@ export const SEARCH_HISTORY_LIMIT = 25;
 
 type Storage = Pick<globalThis.Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-export function loadHistory(storage: Storage): HistoryItem[] {
+export function loadHistory(storage: Storage, key = SEARCH_HISTORY_KEY): HistoryItem[] {
   try {
-    const raw = JSON.parse(storage.getItem(SEARCH_HISTORY_KEY) || '[]');
+    const raw = JSON.parse(storage.getItem(key) || '[]');
     return Array.isArray(raw) ? raw.filter((h) => h && typeof h.q === 'string' && h.q.trim()).slice(0, SEARCH_HISTORY_LIMIT) : [];
   } catch {
     return [];
@@ -33,10 +33,10 @@ export function removeFromHistory(list: HistoryItem[], q: string): HistoryItem[]
   return list.filter((h) => normalize(h.q) !== key);
 }
 
-export function saveHistory(storage: Storage, list: HistoryItem[]): void {
+export function saveHistory(storage: Storage, list: HistoryItem[], key = SEARCH_HISTORY_KEY): void {
   try {
-    if (list.length) storage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(list));
-    else storage.removeItem(SEARCH_HISTORY_KEY);
+    if (list.length) storage.setItem(key, JSON.stringify(list));
+    else storage.removeItem(key);
   } catch {
     /* storage unavailable */
   }

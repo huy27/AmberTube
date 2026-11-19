@@ -102,13 +102,15 @@ const secs = (s) => s.split(':').reduce((a, b) => a * 60 + Number(b), 0);
   await p.click('.menu >> text=Thêm vào hàng đợi');
   check('Add to queue appends', (await qTitles()).length === 2);
 
-  // --- auto-advance at end of track (seek near end of a short track)
+  // --- auto-advance at end of track (seek near end of a short track) — needs "Tự động phát" on
+  // (one switch since 2026-11: off = stop at the end of the song; covered in autoplay-advance.cjs)
   await p.goto(BASE + '/search?q=ambient');
   await p.waitForSelector('.video-row:not(.video-row--skeleton)');
   await p.click('.video-row >> nth=0');
   await p.click('.video-row >> nth=1 >> .video-row__queue');
   await p.waitForTimeout(500);
   await p.keyboard.press('q');
+  if ((await p.getAttribute('.player__autoplay', 'aria-label')).startsWith('Tự động phát: tắt')) await p.click('.player__autoplay');
   const firstTitle = await p.textContent('.player__title');
   await p.$eval('.progress--top .progress__input', (el) => { el.focus(); });
   await p.evaluate(() => {

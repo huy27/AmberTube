@@ -12,6 +12,7 @@ import { sanitizeAmbient, sanitizeFocusSettings, type AmbientPrefs, type FocusSe
 import { playChime } from './audio';
 import { usePlayer } from '../context/PlayerContext';
 import { useToast } from '../context/ToastContext';
+import { scopedKey, useScope } from '../sync/scope';
 
 const KEYS = {
   settings: 'ambertube:focus:settings',
@@ -68,7 +69,9 @@ export function PomodoroController({ children }: { children: ReactNode }) {
   const toast = useToast();
   const player = usePlayer();
   const location = useLocation();
-  const [settings, setSettings] = useState<FocusSettings>(() => read(KEYS.settings, sanitizeFocusSettings(null), (x) => sanitizeFocusSettings(x)));
+  const scope = useScope();
+  const settingsScope = useRef(scope);
+  const [settings, setSettings] = useState<FocusSettings>(() => read(scopedKey(KEYS.settings), sanitizeFocusSettings(null), (x) => sanitizeFocusSettings(x)));
   const [ambient, setAmbient] = useState<AmbientPrefs>(() => read(KEYS.ambient, sanitizeAmbient(null), (x) => sanitizeAmbient(x)));
   const [timer, setTimer] = useState<P.TimerState>(() => read(KEYS.timer, P.initialTimer(settings), (x) => (P.isValidTimer(x) ? x : null)));
   const [stats, setStats] = useState<StatsData>(() => read(KEYS.stats, EMPTY_STATS, (x) => (isValidStats(x) ? x : null)));
@@ -81,7 +84,15 @@ export function PomodoroController({ children }: { children: ReactNode }) {
   const pausedMusicForBreak = useRef(false);
 
   // ---- persistence ----
-  useEffect(() => write(KEYS.settings, settings), [settings]);
+  // focus settings belong to the account (synced); the running timer and stats stay with the device
+  useEffect(() => {
+    if (settingsScope.current === scope) return;
+    settingsScope.current = scope;
+    const next = read(scopedKey(KEYS.settings, scope), sanitizeFocusSettings(null), (x) => sanitizeFocusSettings(x));
+    live.current.settings = next;
+    setSettings(next);
+  }, [scope]);
+  useEffect(() => write(scopedKey(KEYS.settings, settingsScope.current), settings), [settings]);
   useEffect(() => write(KEYS.ambient, ambient), [ambient]);
   useEffect(() => write(KEYS.timer, timer), [timer]);
   useEffect(() => write(KEYS.stats, stats), [stats]);
@@ -94,7 +105,7 @@ export function PomodoroController({ children }: { children: ReactNode }) {
         const v = JSON.parse(e.newValue);
         if (e.key === KEYS.timer && P.isValidTimer(v) && v.version > live.current.timer.version) setTimer(v);
         if (e.key === KEYS.stats && isValidStats(v)) setStats(v);
-        if (e.key === KEYS.settings) setSettings(sanitizeFocusSettings(v));
+        if (e.key === scopedKey(KEYS.settings, settingsScope.current)) setSettings(sanitizeFocusSettings(v));
       } catch {
         /* ignore */
       }

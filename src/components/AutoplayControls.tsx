@@ -10,8 +10,8 @@ export default function AutoplayControls({ large = false }: { large?: boolean })
   return (
     <div className={`autoplay${large ? ' autoplay--large' : ''}`}>
       <div className="autoplay__row">
-        <span className="autoplay__title"><Sparkles size={large ? 20 : 16} /> Tự phát bài gợi ý</span>
-        <button role="switch" aria-checked={autoplay.enabled} aria-label="Tự phát bài gợi ý" className={`toggle${autoplay.enabled ? ' is-on' : ''}${large ? ' toggle--large' : ''}`}
+        <span className="autoplay__title"><Sparkles size={large ? 20 : 16} /> Tự động phát</span>
+        <button role="switch" aria-checked={autoplay.enabled} aria-label="Tự động phát" className={`toggle${autoplay.enabled ? ' is-on' : ''}${large ? ' toggle--large' : ''}`}
           onClick={() => setAutoplay(!autoplay.enabled)}>
           <span className="toggle__knob" />
         </button>
@@ -30,6 +30,7 @@ export default function AutoplayControls({ large = false }: { large?: boolean })
           </button>
         </div>
       )}
+      <p className="autoplay__note">{autoplay.enabled ? 'Hết bài sẽ phát tiếp danh sách, rồi đến bài gợi ý.' : 'Đang tắt: hết bài là dừng.'}</p>
       {autoplay.enabled && autoplay.status === 'empty' && <p className="autoplay__note">Chưa tìm thấy bài phù hợp để phát tiếp. Hãy thử chế độ khác hoặc tìm thêm nhạc.</p>}
       {autoplay.enabled && autoplay.status === 'error' && <p className="autoplay__note autoplay__note--warn">Không tải thêm được gợi ý từ YouTube (mạng hoặc hạn mức API). Đang dùng dữ liệu sẵn có.</p>}
     </div>

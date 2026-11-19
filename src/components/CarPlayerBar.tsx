@@ -44,7 +44,7 @@ export default function CarPlayerBar() {
 
       <div className="cplayer__side">
         <button className={`cbtn cbtn--toggle${autoplay.enabled ? ' is-on' : ''}`} onClick={() => setAutoplay(!autoplay.enabled)} aria-pressed={autoplay.enabled}
-          aria-label={autoplay.enabled ? 'Tự phát bài gợi ý: bật' : 'Tự phát bài gợi ý: tắt'} title="Tự phát bài gợi ý">
+          aria-label={autoplay.enabled ? 'Tự động phát: bật' : 'Tự động phát: tắt (hết bài là dừng)'} title="Tự động phát">
           <InfinityIcon size={24} /><span className="cbtn__label">Tự phát</span>
         </button>
         <Popover className="cplayer__more" label="Tùy chọn phát" align="right" trigger={<MoreHorizontal size={26} />}>

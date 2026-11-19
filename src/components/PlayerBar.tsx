@@ -1,7 +1,7 @@
 import type React from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import {
-  SkipBack, SkipForward, Play, Pause, Shuffle, Repeat, Repeat1, Volume2, Volume1, VolumeX, ListMusic, Heart, Loader2, MicVocal, Maximize2, Infinity as InfinityIcon, AlertTriangle,
+  SkipBack, SkipForward, Play, Pause, Shuffle, Repeat, Repeat1, Volume2, Volume1, VolumeX, ListMusic, Heart, Loader2, MicVocal, Maximize2, Infinity as InfinityIcon, MonitorPlay, AlertTriangle,
 } from 'lucide-react';
 import { useRecommendations } from '../recommend/RecommendationProvider';
 import Artwork from './Artwork';
@@ -13,6 +13,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useUI } from '../context/UIContext';
 import { useOpenFocus } from '../hooks/useFocusNavigation';
+import { useVideoAvailable } from './YouTubeHost';
 import { formatTime } from '../services/format';
 
 export const REPEAT_LABEL = { off: 'tắt', all: 'tất cả', one: 'một bài' } as const;
@@ -116,6 +117,7 @@ export default function PlayerBar() {
   const p = usePlayer();
   const { isSaved, toggleSaved, settings, updateSettings } = useLibrary();
   const ui = useUI();
+  const videoOk = useVideoAvailable();
   const openFocus = useOpenFocus();
   const { autoplay, setAutoplay } = useRecommendations();
   const { track } = p;
@@ -170,8 +172,10 @@ export default function PlayerBar() {
         <SpeedMenu />
         <SleepTimerMenu />
         <VolumeControl />
+        <IconBtn label={!videoOk ? 'Bài này không có video' : ui.videoOpen ? 'Ẩn video (V)' : 'Xem video (V)'} active={videoOk && ui.videoOpen} disabled={!videoOk}
+          onClick={() => ui.toggleVideo()} className="player__video"><MonitorPlay size={20} /></IconBtn>
         <IconBtn label="Lời bài hát (L)" active={ui.panel === 'lyrics'} onClick={() => ui.togglePanel('lyrics')}><MicVocal size={20} /></IconBtn>
-        <IconBtn label={autoplay.enabled ? 'Tự phát bài gợi ý: bật' : 'Tự phát bài gợi ý: tắt'} active={autoplay.enabled} onClick={() => setAutoplay(!autoplay.enabled)} className="player__autoplay"><InfinityIcon size={20} /></IconBtn>
+        <IconBtn label={autoplay.enabled ? 'Tự động phát: bật — hết bài phát tiếp danh sách và bài gợi ý' : 'Tự động phát: tắt — hết bài là dừng'} active={autoplay.enabled} onClick={() => setAutoplay(!autoplay.enabled)} className="player__autoplay"><InfinityIcon size={20} /></IconBtn>
         <IconBtn label="Hàng đợi (Q)" active={ui.panel === 'queue'} onClick={() => ui.togglePanel('queue')}><ListMusic size={20} /></IconBtn>
         <IconBtn label="Chế độ Tập trung (F)" onClick={openFocus}><Maximize2 size={19} /></IconBtn>
       </div>

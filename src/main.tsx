@@ -12,6 +12,7 @@ import './styles/app.css';
 import './styles/focus.css';
 import './styles/car.css';
 import './styles/responsive.css';
+import './styles/account.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -36,6 +36,8 @@ export interface Track {
   lang?: string;
   /** YouTube category id ('10' = Music) */
   categoryId?: string;
+  /** when it was added to favorites / a playlist (ms); used to order synced lists */
+  addedAt?: number;
 }
 
 export interface HistoryEntry {

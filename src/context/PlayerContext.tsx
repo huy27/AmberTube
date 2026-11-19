@@ -368,6 +368,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       toast(`${msg} Hàng đợi không còn bài nào phát được.`, { type: 'warning', duration: 5000 });
       return;
     }
+    // "Tự động phát" off: never move on by itself, not even past a video that can't play
+    if (!live.current.settings.autoplay && live.current.repeat !== 'all') {
+      toast(`${msg} Bấm bài tiếp theo để nghe tiếp.`, { type: 'warning', duration: 4200 });
+      return;
+    }
     const hasNext = Q.pickNext(live.current.queue, { shuffle: false, repeat: 'all', auto: false, isPlayable: isPlayableLive });
     toast(hasNext ? `${msg} Đang chuyển sang bài tiếp theo…` : msg, { type: 'warning', duration: 4200 });
     if (hasNext) setTimeout(() => advance(true) || advance(false), 500);

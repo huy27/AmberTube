@@ -57,6 +57,9 @@ git push -u origin main
    | `VITE_LYRICS_ENDPOINT` | *(tùy chọn)* | Production |
    | `VITE_CONVERSION_ENDPOINT` | *(tùy chọn)* | Production |
    | `VITE_AUTHORIZED_CHANNEL_IDS` | *(tùy chọn)* | Production |
+   | `VITE_LASTFM_API_KEY` | *(tùy chọn)* bảng xếp hạng Last.fm | Production |
+   | `VITE_SUPABASE_URL` | *(tùy chọn)* `https://<ref>.supabase.co` | Production |
+   | `VITE_SUPABASE_ANON_KEY` | *(tùy chọn)* anon / publishable key — **không** dùng service_role | Production |
 
 5. Bấm **Deploy**. Khoảng 1 phút sau, app chạy tại `https://ambertube.vercel.app`.
 

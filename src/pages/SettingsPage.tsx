@@ -74,8 +74,8 @@ export default function SettingsPage() {
 
       <h2 className="section-title">Phát nhạc</h2>
       <div className="panel">
-        <Row title="Tự động phát" desc="Phát bài tiếp theo trong hàng đợi khi một bài kết thúc. Video không phát được sẽ tự bỏ qua.">
-          <Toggle label="Tự động phát" checked={settings.autoplay} onChange={(v) => { updateSettings({ autoplay: v }); if (!v && smart.enabled) setSmart(false); }} />
+        <Row title="Tự động phát" desc="Bật: hết bài thì phát bài kế tiếp trong danh sách, hết danh sách thì phát tiếp bài gợi ý. Tắt: hết bài là dừng. Cùng là nút ∞ trên thanh phát nhạc.">
+          <Toggle label="Tự động phát" checked={smart.enabled} onChange={(v) => setSmart(v)} />
         </Row>
         <Row title="Tốc độ ưa thích" desc="Được ghi nhớ giữa các lần mở. Nguồn không hỗ trợ sẽ dùng tốc độ gần nhất.">
           <select className="field field--select" value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Tốc độ phát ưa thích">

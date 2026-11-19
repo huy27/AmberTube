@@ -80,6 +80,43 @@ const resource = ([id, title, ch, dur]) => ({ id, snippet: { title, channelTitle
     const lib = { saved: [], playlists: [], history: [], settings: { bitrate: 192, autoplay: false, authorizedChannels: [], visualizer: 'wave', voiceLang: 'vi-VN' } };
     localStorage.setItem('ambertube:v1', JSON.stringify(lib));
   });
+  // ONE switch: "Tự động phát" off = the song ends and playback stops (even with more songs queued).
+  // The old confusing state (∞ off but "advance to next" on) must behave as off too.
+  async function stopsAtEnd(name, prep, viaSettings = false) {
+    const p = await ctx.newPage();
+    const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
+    await p.goto(url);
+    await p.evaluate(prep);
+    await p.reload();
+    if (viaSettings) {
+      await p.goto(url + 'settings');
+      await p.click('.main__scroll button[role="switch"][aria-label="Tự động phát"]');
+      await p.waitForTimeout(200);
+      check(`${name}: the Settings switch and the ∞ button are the same switch`, (await p.getAttribute('.player__autoplay', 'aria-label')).startsWith('Tự động phát: tắt'));
+    }
+    await p.fill('.searchbar__input', 'đen vâu'); await p.keyboard.press('Enter');
+    await p.waitForSelector('.video-row');
+    await p.click('.video-row >> nth=0');
+    await p.waitForTimeout(1500);
+    await p.click('.video-row >> nth=1 >> .video-row__queue'); // a next song is waiting in the queue
+    await p.click('.video-row >> nth=2 >> .video-row__queue');
+    const first = await p.textContent('.player__title');
+    await p.keyboard.press('q'); await p.waitForTimeout(300);
+    const queued = (await p.$$('.queue__item')).length;
+    await p.keyboard.press('q');
+    await p.waitForTimeout(7500);
+    const after = await p.textContent('.player__title');
+    const playing = await p.evaluate(() => document.querySelector('.play-btn').getAttribute('aria-label') === 'Tạm dừng');
+    check(`${name}: song ends → stops, does not move on (${queued} songs queued)`, after === first && !playing && queued > 1, `${first} → ${after}, playing=${playing}`);
+    check(`${name}: no page errors`, errs.length === 0, errs.join(' | '));
+    await p.close();
+  }
+  await stopsAtEnd('∞ off, old "advance" setting still on', () => {
+    localStorage.clear();
+    localStorage.setItem('ambertube:smart-autoplay', JSON.stringify({ enabled: false, mode: 'balanced' }));
+    localStorage.setItem('ambertube:v1', JSON.stringify({ saved: [], playlists: [], history: [], settings: { bitrate: 192, autoplay: true, authorizedChannels: [], visualizer: 'wave', voiceLang: 'vi-VN' } }));
+  });
+  await stopsAtEnd('turned off in Settings', () => { localStorage.clear(); }, true);
   console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
   await b.close();
 })();

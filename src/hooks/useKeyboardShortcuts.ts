@@ -21,6 +21,7 @@ export const SHORTCUTS: ShortcutDef[] = [
   { keys: ['R'], label: 'Lặp lại: tắt → tất cả → một bài' },
   { keys: ['L'], label: 'Lời bài hát' },
   { keys: ['Q'], label: 'Hàng đợi' },
+  { keys: ['V'], label: 'Xem / ẩn video (giao diện máy tính)' },
   { keys: ['F'], label: 'Chế độ Tập trung' },
   { keys: ['/'], label: 'Tìm kiếm (hoặc Ctrl + K)' },
   { keys: ['Esc'], label: 'Đóng bảng bên' },
@@ -88,6 +89,9 @@ export function useKeyboardShortcuts(): void {
         u.togglePanel('lyrics');
       } else if (key === 'q' || key === 'Q') {
         u.togglePanel('queue');
+      } else if (key === 'v' || key === 'V') {
+        if (p.track?.provider !== 'youtube' || document.querySelector('.app--compact')) return;
+        u.toggleVideo();
       } else if (key === 'f' || key === 'F') {
         openFocus();
       } else if (key === 'Escape') {

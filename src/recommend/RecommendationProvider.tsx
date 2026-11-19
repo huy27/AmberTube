@@ -20,6 +20,8 @@ import { MOODS } from '../data/demoCatalog';
 import { DEMO_TRACKS } from '../data/demoCatalog';
 import { upcomingCount } from '../playback/queue';
 
+import { scopedKey, useScope } from '../sync/scope';
+
 const PREF_KEY = 'ambertube:smart-autoplay';
 const REFILL_AT = 2; // fetch more when this many (or fewer) songs remain
 const BATCH = 8; // 5–10 recommendations per refill
@@ -32,9 +34,9 @@ interface AutoplayPrefs {
   mode: RadioMode;
 }
 
-function readPrefs(): AutoplayPrefs {
+function readPrefs(scope?: string): AutoplayPrefs {
   try {
-    const r = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+    const r = JSON.parse(localStorage.getItem(scopedKey(PREF_KEY, scope)) || '{}');
     return { enabled: r.enabled !== false, mode: r.mode === 'similar' || r.mode === 'discovery' ? r.mode : 'balanced' };
   } catch {
     return { enabled: true, mode: 'balanced' };
@@ -130,8 +132,20 @@ export function RecommendationProvider({ children }: { children: ReactNode }) {
   const looked = useRef(new Set<string>());
   const quotaHit = useRef(false);
 
+  // signed in / out: that scope's preferences
+  const scope = useScope();
+  const prefScope = useRef(scope);
   useEffect(() => {
-    localStorage.setItem(PREF_KEY, JSON.stringify(prefs));
+    if (prefScope.current === scope) return;
+    prefScope.current = scope;
+    setPrefs(readPrefs(scope));
+  }, [scope]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(scopedKey(PREF_KEY, prefScope.current), JSON.stringify(prefs));
+    } catch {
+      /* ignore */
+    }
   }, [prefs]);
 
   useEffect(() => {
@@ -281,10 +295,12 @@ export function RecommendationProvider({ children }: { children: ReactNode }) {
     }
   }, [enrich]);
 
-  // older saved settings could have "advance to next song" off while Smart Autoplay is on → the ∞ button looked broken
+  // ONE switch, "Tự động phát": on = play the rest of the queue, then recommendations; off = stop when the
+  // song ends. The library's "advance to next song" setting always follows it (older versions had two
+  // separate switches, and a synced or old setting may still disagree).
   useEffect(() => {
-    if (prefs.enabled && !settings.autoplay) updateSettings({ autoplay: true });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (settings.autoplay !== prefs.enabled) updateSettings({ autoplay: prefs.enabled });
+  }, [prefs.enabled, settings.autoplay]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // the queue ran out before recommendations arrived (e.g. a slow or failed lookup): try again right away
   useEffect(() => {
@@ -308,8 +324,8 @@ export function RecommendationProvider({ children }: { children: ReactNode }) {
 
   const setAutoplay = useCallback((enabled: boolean) => {
     setPrefs((p) => ({ ...p, enabled }));
-    // Smart Autoplay is useless if the player doesn't advance to the next song: turn that on too
-    if (enabled && !liveRef.current.settings.autoplay) liveRef.current.updateSettings({ autoplay: true });
+    // one switch: advancing to the next song follows it too
+    if (liveRef.current.settings.autoplay !== enabled) liveRef.current.updateSettings({ autoplay: enabled });
     token.current++;
     busy.current = false;
     if (!enabled) {

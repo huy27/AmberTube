@@ -31,6 +31,7 @@ export function PlaylistsPage() {
     e.preventDefault();
     if (!name.trim()) return;
     const id = createPlaylist(name);
+    if (!id) return; // limit reached (a message was shown)
     setName('');
     setCreating(false);
     navigate(`/playlists/${id}`);

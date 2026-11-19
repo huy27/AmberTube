@@ -2,11 +2,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import type { DownloadJob, HistoryEntry, Playlist, Settings, Track } from '../types';
 import { downloadEligibility, runConversion } from '../services/downloads';
 import { useToast } from './ToastContext';
+import { GUEST, getScope, scopedKey, useScope } from '../sync/scope';
+import { ACCOUNT_LIMITS, LIMIT_MESSAGES } from '../sync/limits';
 
 const STORAGE_KEY = 'ambertube:v1';
 const HISTORY_LIMIT = 200;
 
 interface LibraryState {
+  /** whose library this is (guest or an account); never persisted */
+  scope: string;
   saved: Track[];
   history: HistoryEntry[];
   playlists: Playlist[];
@@ -17,6 +21,7 @@ interface LibraryState {
 const DEFAULT_SETTINGS: Settings = { bitrate: 192, autoplay: true, authorizedChannels: [], visualizer: 'wave', voiceLang: 'vi-VN' };
 
 const DEFAULT_STATE: LibraryState = {
+  scope: GUEST,
   saved: [],
   history: [],
   playlists: [
@@ -35,10 +40,20 @@ const slim = (t: Track): Track => {
   return rest;
 };
 
-function load(): LibraryState {
+/** Songs saved before sync existed have no `addedAt`; give them stable times so lists keep their order. */
+function withTimes(saved: Track[], playlists: Playlist[]): { saved: Track[]; playlists: Playlist[] } {
+  const now = Date.now();
+  return {
+    saved: saved.map((t, i) => (t.addedAt ? t : { ...t, addedAt: now - (i + 1) * 1000 })),
+    playlists: playlists.map((p) => ({ ...p, tracks: p.tracks.map((t, i) => (t.addedAt ? t : { ...t, addedAt: (p.createdAt || now) + i })) })),
+  };
+}
+
+function load(scope = getScope()): LibraryState {
   try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (!raw) return DEFAULT_STATE;
+    const raw = JSON.parse(localStorage.getItem(scopedKey(STORAGE_KEY, scope)) || 'null');
+    // an account starts empty (its data comes from the cloud); only the guest gets sample playlists
+    if (!raw) return scope === GUEST ? DEFAULT_STATE : { ...DEFAULT_STATE, scope, playlists: [] };
     // v1 stored history as plain tracks; wrap them as entries
     const history: HistoryEntry[] = (raw.history || []).map((h: HistoryEntry | Track, i: number) =>
       'entryId' in h ? h : { entryId: `legacy-${i}`, track: h, playedAt: Date.now() - i * 60_000 },
@@ -46,6 +61,8 @@ function load(): LibraryState {
     return {
       ...DEFAULT_STATE,
       ...raw,
+      ...withTimes(raw.saved || [], raw.playlists || DEFAULT_STATE.playlists),
+      scope,
       history,
       settings: { ...DEFAULT_SETTINGS, ...raw.settings },
       // jobs can't survive a reload, so anything unfinished is marked interrupted
@@ -54,19 +71,25 @@ function load(): LibraryState {
       ),
     };
   } catch {
-    return DEFAULT_STATE;
+    return scope === GUEST ? DEFAULT_STATE : { ...DEFAULT_STATE, scope, playlists: [] };
   }
 }
 
+/** The parts of the library that sync to the account. */
+export type SyncedLibrary = Pick<LibraryState, 'saved' | 'history' | 'playlists' | 'settings'>;
+
 type Action =
-  | { type: 'TOGGLE_SAVED'; track: Track }
+  | { type: 'REPLACE'; state: LibraryState }
+  | { type: 'SYNC_APPLY'; data: SyncedLibrary }
+  | { type: 'SYNC_FN'; fn: (cur: SyncedLibrary) => SyncedLibrary }
+  | { type: 'TOGGLE_SAVED'; track: Track; at: number }
   | { type: 'HISTORY_PUSH'; track: Track; at: number }
   | { type: 'HISTORY_REMOVE'; entryId: string }
   | { type: 'HISTORY_CLEAR' }
   | { type: 'PL_CREATE'; id: string; name: string }
   | { type: 'PL_RENAME'; id: string; name: string }
   | { type: 'PL_DELETE'; id: string }
-  | { type: 'PL_ADD'; id: string; track: Track }
+  | { type: 'PL_ADD'; id: string; track: Track; at: number }
   | { type: 'PL_REMOVE'; id: string; trackId: string }
   | { type: 'DL_ADD'; job: DownloadJob }
   | { type: 'DL_UPDATE'; id: string; patch: Partial<DownloadJob> }
@@ -77,9 +100,17 @@ type Action =
 
 function reducer(state: LibraryState, a: Action): LibraryState {
   switch (a.type) {
+    case 'REPLACE':
+      return a.state;
+    case 'SYNC_APPLY':
+      return { ...state, ...a.data, settings: { ...DEFAULT_SETTINGS, ...a.data.settings } };
+    case 'SYNC_FN': {
+      const d = a.fn({ saved: state.saved, history: state.history, playlists: state.playlists, settings: state.settings });
+      return { ...state, ...d, settings: { ...DEFAULT_SETTINGS, ...d.settings } };
+    }
     case 'TOGGLE_SAVED': {
       const exists = state.saved.some((t) => t.id === a.track.id);
-      return { ...state, saved: exists ? state.saved.filter((t) => t.id !== a.track.id) : [slim(a.track), ...state.saved] };
+      return { ...state, saved: exists ? state.saved.filter((t) => t.id !== a.track.id) : [{ ...slim(a.track), addedAt: a.at }, ...state.saved] };
     }
     case 'HISTORY_PUSH': {
       const [last, ...rest] = state.history;
@@ -103,7 +134,7 @@ function reducer(state: LibraryState, a: Action): LibraryState {
       return {
         ...state,
         playlists: state.playlists.map((p) =>
-          p.id === a.id && !p.tracks.some((t) => t.id === a.track.id) ? { ...p, tracks: [...p.tracks, slim(a.track)] } : p,
+          p.id === a.id && !p.tracks.some((t) => t.id === a.track.id) ? { ...p, tracks: [...p.tracks, { ...slim(a.track), addedAt: a.at }] } : p,
         ),
       };
     case 'PL_REMOVE':
@@ -144,6 +175,8 @@ export interface LibraryApi extends LibraryState {
   clearFinishedDownloads(): void;
   markDownloadsSeen(): void;
   updateSettings(patch: Partial<Settings>): void;
+  /** Replace the synced parts with data from the account (sync engine only). */
+  applySynced(data: SyncedLibrary | ((cur: SyncedLibrary) => SyncedLibrary)): void;
   addLocalFiles(files: FileList | File[]): number;
   removeLocalTrack(id: string): void;
 }
@@ -161,7 +194,8 @@ function readDuration(src: string): Promise<number> {
 }
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, load);
+  const [state, dispatch] = useReducer(reducer, undefined, () => load());
+  const scope = useScope();
   const [localTracks, setLocalTracks] = useState<Track[]>([]);
   const toast = useToast();
   const jobs = useRef(new Map<string, AbortController>());
@@ -174,7 +208,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const save = () => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef.current));
+        // written to the key of the library's own scope, even if the scope has just changed
+        const { scope: owner, ...data } = stateRef.current;
+        localStorage.setItem(scopedKey(STORAGE_KEY, owner), JSON.stringify(data));
       } catch {
         /* storage full or disabled */
       }
@@ -187,27 +223,53 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     };
   }, [state]);
 
+  // signed in / out: show that scope's library (the player and its queue are untouched)
+  useEffect(() => {
+    if (scope === stateRef.current.scope) return;
+    const { scope: owner, ...data } = stateRef.current;
+    try {
+      localStorage.setItem(scopedKey(STORAGE_KEY, owner), JSON.stringify(data)); // flush the old one first
+    } catch {
+      /* ignore */
+    }
+    dispatch({ type: 'REPLACE', state: load(scope) });
+  }, [scope]);
+
   const isSaved = useCallback((id: string) => state.saved.some((t) => t.id === id), [state.saved]);
 
   const toggleSaved = useCallback(
     (track: Track) => {
       const wasSaved = state.saved.some((t) => t.id === track.id);
-      dispatch({ type: 'TOGGLE_SAVED', track });
+      if (!wasSaved && state.saved.length >= ACCOUNT_LIMITS.favorites) {
+        toast(LIMIT_MESSAGES.favorites, { type: 'warning', duration: 5200 });
+        return;
+      }
+      dispatch({ type: 'TOGGLE_SAVED', track, at: Date.now() });
       toast(wasSaved ? 'Đã bỏ khỏi yêu thích' : 'Đã thêm vào yêu thích', { type: 'success', duration: 2200 });
     },
     [state.saved, toast],
   );
 
   const createPlaylist = useCallback((name: string) => {
+    if (stateRef.current.playlists.length >= ACCOUNT_LIMITS.playlists) {
+      toast(LIMIT_MESSAGES.playlists, { type: 'warning', duration: 5200 });
+      return '';
+    }
     const id = `pl-${newId()}`;
     dispatch({ type: 'PL_CREATE', id, name: name.trim() || 'Playlist mới' });
     return id;
-  }, []);
+  }, [toast]);
 
   const addToPlaylist = useCallback(
     (playlistId: string, track: Track) => {
-      const pl = state.playlists.find((p) => p.id === playlistId);
-      dispatch({ type: 'PL_ADD', id: playlistId, track });
+      if (!playlistId) return; // creating the playlist was refused (limit)
+      const pls = stateRef.current.playlists;
+      const pl = pls.find((p) => p.id === playlistId); // undefined right after createPlaylist (same tick)
+      if (!pl?.tracks.some((t) => t.id === track.id)) {
+        if (pl && pl.tracks.length >= ACCOUNT_LIMITS.playlistTracks) return void toast(LIMIT_MESSAGES.playlistTracks, { type: 'warning', duration: 5200 });
+        if (pls.reduce((n, p) => n + p.tracks.length, 0) >= ACCOUNT_LIMITS.playlistTotal) return void toast(LIMIT_MESSAGES.playlistTotal, { type: 'warning', duration: 5200 });
+      }
+      dispatch({ type: 'PL_ADD', id: playlistId, track, at: Date.now() });
       if (pl) toast(`Đã thêm vào “${pl.name}”`, { type: 'success', duration: 2200 });
     },
     [state.playlists, toast],
@@ -313,6 +375,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       clearFinishedDownloads: () => dispatch({ type: 'DL_CLEAR_DONE' }),
       markDownloadsSeen: () => dispatch({ type: 'DL_SEEN' }),
       updateSettings: (patch) => dispatch({ type: 'SETTINGS', patch }),
+      applySynced: (data) => dispatch(typeof data === 'function' ? { type: 'SYNC_FN', fn: data } : { type: 'SYNC_APPLY', data }),
       addLocalFiles,
       removeLocalTrack,
     }),

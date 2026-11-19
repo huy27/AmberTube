@@ -23,6 +23,7 @@ Xem [DEPLOY.md](DEPLOY.md) để biết cách đưa app lên Vercel (`ambertube.
 | Biến | Mục đích |
 | --- | --- |
 | `VITE_YOUTUBE_API_KEY` | Khóa YouTube Data API v3: bật tìm kiếm YouTube thật. |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | *(tùy chọn)* Tài khoản và đồng bộ qua Supabase (chỉ dùng anon/publishable key). Xem [SUPABASE.md](SUPABASE.md). |
 | `VITE_LASTFM_API_KEY` | Khóa Last.fm API (miễn phí tại last.fm/api/account/create): bật “Nghệ sĩ nổi bật”, “Phổ biến tại Việt Nam” và “Thịnh hành toàn cầu”. Không có khóa thì các mục này tự ẩn. |
 | `VITE_LYRICS_ENDPOINT` | Dịch vụ lời bài hát **có bản quyền** của bạn (Musixmatch, LyricFind…). |
 | `VITE_CONVERSION_ENDPOINT` | Backend chuyển đổi MP3 của bạn (xem mục "Tải xuống"). |
@@ -81,6 +82,13 @@ Nút **Máy tính / Car View** nằm trên thanh đầu trang, trong menu và tr
 - **Lịch sử tìm kiếm:** tối đa 25 mục, không lặp, xóa từng mục hoặc xóa hết.
 - **Bàn phím:** ↑/↓ chọn gợi ý, Enter tìm hoặc chọn, Esc đóng. Bấm ra ngoài cũng đóng.
 - Một truy vấn chỉ gọi API một lần, kể cả khi bấm tìm nhiều lần liên tiếp.
+
+## Tự động phát (một công tắc)
+
+- **Bật** (mặc định): hết bài thì phát bài kế tiếp trong hàng đợi, hết hàng đợi thì tự thêm bài gợi ý.
+- **Tắt**: hết bài là dừng. Không chuyển bài, không thêm gợi ý, kể cả khi video kế tiếp lỗi.
+- Nút ∞ trên thanh phát nhạc, nút "Tự động phát" trong Car View và Now Playing, công tắc trong Cài đặt và trong hàng đợi đều là **cùng một công tắc**.
+- Lặp lại ("tất cả" hoặc "một bài") vẫn hoạt động khi tắt, vì đó là lựa chọn riêng của người dùng.
 
 ## Gợi ý cá nhân hóa & Smart Autoplay
 
@@ -312,6 +320,14 @@ Thử điều hướng 400 lần giữa các trang trong khi phát nhạc (`e2e/
 
 ## Phát YouTube
 
+**Xem video (giao diện máy tính):**
+- Bấm nút màn hình ▶ trên thanh phát nhạc, hoặc phím **V**, để hiện video trong một cửa sổ nhỏ phía trên thanh phát (360 px, bấm ⤢ để phóng to 640 px).
+- Bấm vào hình để phát / tạm dừng, bấm đúp để phóng to.
+- Bật/tắt video **không làm ngắt nhạc**: vẫn là trình phát đang chạy, app chỉ đổi chỗ hiển thị.
+- Cửa sổ tự dịch sang trái khi mở hàng đợi hoặc lời bài hát. Máy này nhớ lựa chọn bật/tắt.
+- **Car View không bao giờ hiện video**, để an toàn khi lái xe.
+
+
 Video YouTube phát qua **YouTube IFrame Player API** chính thức, ở chế độ **chỉ nghe nhạc**: trình phát nằm ngoài màn hình (component `YouTubeHost`).
 
 > ⚠️ Chính sách API của YouTube yêu cầu trình phát phải hiển thị (tối thiểu 200×200 px) và không cho phép chỉ phát âm thanh. Chế độ ẩn này vi phạm chính sách đó, nên Google có thể khóa API key. Muốn hiện lại trình phát, sửa class `.yt-host` trong `src/styles/app.css`.
@@ -378,6 +394,21 @@ Last.fm chỉ cung cấp **thông tin** (tên bài, nghệ sĩ, số người ng
   - App không tìm hàng loạt; chỉ tìm khi người dùng chọn bài.
   - Không tìm thấy thì hiện thông báo và không phát bài khác.
 
+## Tài khoản & đồng bộ giữa thiết bị
+
+- Đăng nhập là **tùy chọn**. Khi chưa đăng nhập, góc trên hiện "Khách · Đăng nhập" và mọi tính năng nghe nhạc vẫn chạy.
+- Đăng ký hoặc đăng nhập bằng email (Google nếu bật trên Supabase); quên mật khẩu qua trang `/auth/reset`.
+- Phiên đăng nhập được giữ khi tải lại trang.
+- Dữ liệu đồng bộ: yêu thích, playlist (cùng các bài), nghe gần đây, thống kê nghe, lịch sử tìm kiếm và cài đặt.
+- Avatar có chấm màu báo trạng thái: đã đồng bộ / đang đồng bộ / offline / lỗi / phiên hết hạn.
+- Trang `/account`: đồng bộ ngay, gộp dữ liệu khách, đổi tên hoặc mật khẩu, xóa dữ liệu đã đồng bộ, đăng xuất.
+- Supabase chỉ lưu dữ liệu người dùng; nhạc vẫn phát từ YouTube.
+- Thư viện Supabase chỉ được tải khi có người đăng nhập.
+
+Mỗi tài khoản có giới hạn dung lượng: 5.000 bài yêu thích, 200 playlist, tổng 5.000 bài trong playlist. Lịch sử nghe và tìm kiếm tự xóa phần cũ, nên mỗi user tối đa khoảng 10 MB. Mức đang dùng hiện ở trang `/account`.
+
+Chi tiết cài đặt, bảo mật (RLS), giới hạn dung lượng và cơ chế đồng bộ: [SUPABASE.md](SUPABASE.md). Code nằm trong `src/auth/` và `src/sync/` (`engine.ts` và `model.ts` có unit test), database ở `supabase/migrations/0001_init.sql`.
+
 ## Kiểm thử
 
 - `e2e/popular-artists.cjs`, `e2e/popular-charts.cjs`: Last.fm và YouTube giả lập. Kiểm tra:
@@ -390,7 +421,8 @@ Last.fm chỉ cung cấp **thông tin** (tên bài, nghệ sĩ, số người ng
   - bố cục ở 390 px, Car View 800×480 và 1024×600, và 1920 px.
   
   Cần bản build có API: `VITE_YOUTUBE_API_KEY=TEST_KEY VITE_LASTFM_API_KEY=TEST npx vite build --outDir /tmp/dist-api && npx vite preview --outDir /tmp/dist-api --port 4174`.
-- `npm test`: 72 unit test cho hàng đợi, tốc độ, lưu trạng thái, parser LRC, Pomodoro, thống kê, cài đặt, tìm kiếm, nhận diện bài hát (`identity.test.ts`) và thuật toán gợi ý.
+- `npm test`: 88 unit test (gồm 14 test đồng bộ); `npm run test:db`: 16 test SQL/RLS/giới hạn trên Postgres thật (PGlite); `e2e/auth-sync.cjs`: 46 kiểm tra đăng nhập và đồng bộ 2 thiết bị.
+  - Ngoài ra unit test còn phủ: hàng đợi, tốc độ, lưu trạng thái, parser LRC, Pomodoro, thống kê, cài đặt, tìm kiếm, nhận diện bài hát (`identity.test.ts`) và thuật toán gợi ý.
   - Phần gợi ý kiểm tra: cùng bài khác ID video, Audio/MV/Lyrics, Remix/Live, bài khác cùng nghệ sĩ, cùng phong cách khác nghệ sĩ, đa dạng nghệ sĩ, bài vừa nghe, bài không thích, chống trùng khi thêm vào hàng đợi, ít/không có ứng viên, và làm mới nhiều lần.
 - `e2e/voice-mic-release.cjs`: kiểm tra micro được giải phóng ở mọi tình huống kết thúc tìm kiếm bằng giọng nói, nhạc tạm dừng và không tự phát lại.
 - `e2e/perf-web-vitals.cjs`, `e2e/perf-car-profile.cjs`, `e2e/perf-memory-nav.cjs`: đo hiệu năng.

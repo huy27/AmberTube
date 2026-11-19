@@ -18,6 +18,9 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ArtistsPage = lazy(() => import('./pages/ArtistsPage'));
 const ArtistPage = lazy(() => import('./pages/ArtistPage'));
 const ChartPage = lazy(() => import('./pages/ChartPage'));
+const AccountPage = lazy(() => import('./pages/AccountPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const AuthDialog = lazy(() => import('./auth/AuthDialog'));
 import { ToastProvider } from './context/ToastContext';
 import { LibraryProvider } from './context/LibraryContext';
 import { PlayerProvider } from './context/PlayerContext';
@@ -32,6 +35,9 @@ import { ListeningStoreProvider } from './recommend/ListeningStore';
 import { RecommendationProvider } from './recommend/RecommendationProvider';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { diagEnabled } from './diag/audioDiag';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import { SyncProvider } from './sync/SyncProvider';
+import GuestMergeDialog from './sync/GuestMergeDialog';
 
 const FocusModePage = lazy(() => import('./focus/components/FocusModePage'));
 // device-testing diagnostics, only loaded with ?diag=1
@@ -69,6 +75,8 @@ function Shell() {
             <Route path="/artists" element={<ArtistsPage />} />
             <Route path="/artist/:name" element={<ArtistPage />} />
             <Route path="/charts/:source" element={<ChartPage />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/auth/reset" element={<ResetPasswordPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </Suspense>
@@ -82,9 +90,16 @@ function Shell() {
   );
 }
 
+/** The sign-in dialog's code loads only when it is opened. */
+function AuthDialogHost() {
+  const { dialog } = useAuth();
+  return dialog ? <Suspense fallback={null}><AuthDialog /></Suspense> : null;
+}
+
 export default function App() {
   return (
     <ToastProvider>
+      <AuthProvider>
       <DisplayModeProvider>
       <SearchHistoryProvider>
       <LibraryProvider>
@@ -93,6 +108,7 @@ export default function App() {
         <RecommendationProvider>
           <UIProvider>
             <PomodoroController>
+              <SyncProvider>
               <Routes>
                 {/* Focus mode replaces the whole layout but shares the same player, queue and timer */}
                 <Route path="/focus" element={<Suspense fallback={<div className="fm fm--loading" />}><FocusModePage /></Suspense>} />
@@ -101,6 +117,9 @@ export default function App() {
               {/* outside the routes so the YouTube iframe survives switching layouts */}
               <YouTubeHost />
               {diagEnabled() && <Suspense fallback={null}><DiagPanel /></Suspense>}
+              <AuthDialogHost />
+              <GuestMergeDialog />
+              </SyncProvider>
             </PomodoroController>
           </UIProvider>
         </RecommendationProvider>
@@ -109,6 +128,7 @@ export default function App() {
       </LibraryProvider>
       </SearchHistoryProvider>
       </DisplayModeProvider>
+      </AuthProvider>
     </ToastProvider>
   );
 }

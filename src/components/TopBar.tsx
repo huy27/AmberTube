@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { Menu, User } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import AccountButton from '../auth/AccountButton';
 import SearchBox from './SearchBox';
 import FocusTimerPill from './FocusTimerPill';
 import DisplayModeToggle from './DisplayModeToggle';
@@ -23,11 +24,7 @@ export default function TopBar() {
       <SearchBox />
       <FocusTimerPill />
       <DisplayModeToggle />
-      {!car && (
-        <button className="avatar" aria-label="Tài khoản" title="Tài khoản">
-          <User size={20} fill="currentColor" strokeWidth={0} />
-        </button>
-      )}
+      <AccountButton compact={car} />
       {car && <CarNavDrawer open={menuOpen} onClose={closeMenu} />}
     </header>
   );

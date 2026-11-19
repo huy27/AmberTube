@@ -503,7 +503,35 @@
 /* ============ Hidden YouTube player host (audio only) ============ */
 /* Kept rendered at a real size but off-screen: display:none can stop the iframe from playing. */
 .yt-host { position: fixed; left: -10000px; top: 0; width: 200px; height: 200px; opacity: 0; pointer-events: none; overflow: hidden; }
-.yt-host iframe { width: 100%; height: 100%; border: 0; }
+.yt-host iframe, .yt-host > * { width: 100%; height: 100%; border: 0; display: block; }
+
+/* Desktop video window: the SAME .yt-host element is shown in place (never moved, so playback never restarts) */
+.yt-host--visible, .video-dock {
+  --vd-w: 360px; --vd-right: 16px; --vd-bottom: calc(var(--player-h) + 12px); --vd-bar: 34px;
+}
+.yt-host--large, .video-dock--large { --vd-w: min(640px, calc(100vw - 32px), calc((100vh - var(--player-h) - 60px) * 16 / 9)); }
+.yt-host--shift, .video-dock--shift { --vd-right: 376px; }
+.yt-host--large.yt-host--shift, .video-dock--large.video-dock--shift { --vd-w: min(640px, calc(100vw - 408px), calc((100vh - var(--player-h) - 60px) * 16 / 9)); }
+.yt-host--visible {
+  left: auto; top: auto; right: var(--vd-right); bottom: var(--vd-bottom);
+  width: var(--vd-w); height: calc(var(--vd-w) * 9 / 16); opacity: 1; z-index: 40;
+  border-radius: 0 0 12px 12px; background: #000;
+}
+.video-dock {
+  position: fixed; right: var(--vd-right); bottom: var(--vd-bottom); width: var(--vd-w); z-index: 41;
+  border-radius: 0 0 12px 12px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border); animation: fade-in 160ms var(--ease);
+}
+.video-dock__bar {
+  display: flex; align-items: center; gap: 4px; height: var(--vd-bar); padding: 0 4px 0 12px;
+  background: #26231F; border-radius: 12px 12px 0 0; position: absolute; left: 0; right: 0; bottom: 100%;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--border);
+}
+.video-dock__title { flex: 1; min-width: 0; font-size: 12.5px; color: var(--text-1b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.video-dock__screen { display: block; width: 100%; aspect-ratio: 16 / 9; background: transparent; border-radius: 0 0 12px 12px; cursor: pointer; }
+.video-dock__screen:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@keyframes fade-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .video-dock { animation: none; } }
+
 
 /* ============ Queue panel ============ */
 .side-panel {
