@@ -15,6 +15,9 @@ const PlaylistsPage = lazy(() => import('./pages/PlaylistsPage').then((m) => ({ 
 const PlaylistDetailPage = lazy(() => import('./pages/PlaylistsPage').then((m) => ({ default: m.PlaylistDetailPage })));
 const DownloadsPage = lazy(() => import('./pages/DownloadsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const ArtistsPage = lazy(() => import('./pages/ArtistsPage'));
+const ArtistPage = lazy(() => import('./pages/ArtistPage'));
+const ChartPage = lazy(() => import('./pages/ChartPage'));
 import { ToastProvider } from './context/ToastContext';
 import { LibraryProvider } from './context/LibraryContext';
 import { PlayerProvider } from './context/PlayerContext';
@@ -63,6 +66,9 @@ function Shell() {
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/downloads" element={<DownloadsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/artists" element={<ArtistsPage />} />
+            <Route path="/artist/:name" element={<ArtistPage />} />
+            <Route path="/charts/:source" element={<ChartPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </Suspense>

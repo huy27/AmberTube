@@ -23,6 +23,7 @@ Xem [DEPLOY.md](DEPLOY.md) để biết cách đưa app lên Vercel (`ambertube.
 | Biến | Mục đích |
 | --- | --- |
 | `VITE_YOUTUBE_API_KEY` | Khóa YouTube Data API v3: bật tìm kiếm YouTube thật. |
+| `VITE_LASTFM_API_KEY` | Khóa Last.fm API (miễn phí tại last.fm/api/account/create): bật “Nghệ sĩ nổi bật”, “Phổ biến tại Việt Nam” và “Thịnh hành toàn cầu”. Không có khóa thì các mục này tự ẩn. |
 | `VITE_LYRICS_ENDPOINT` | Dịch vụ lời bài hát **có bản quyền** của bạn (Musixmatch, LyricFind…). |
 | `VITE_CONVERSION_ENDPOINT` | Backend chuyển đổi MP3 của bạn (xem mục "Tải xuống"). |
 | `VITE_AUTHORIZED_CHANNEL_IDS` | ID các kênh bạn sở hữu hoặc có quyền tải, cách nhau bằng dấu phẩy. |
@@ -335,9 +336,61 @@ GET  /jobs/:id    -> { status: 'queued'|'converting'|'done'|'error', progress: 0
 
 Backend nên chuyển đổi từ **file gốc bạn sở hữu**, không tải trực tiếp từ YouTube.
 
+## Bảng xếp hạng Last.fm
+
+Last.fm chỉ cung cấp **thông tin** (tên bài, nghệ sĩ, số người nghe), không có âm thanh. Bài hát luôn phát qua trình phát YouTube hiện có.
+
+| Mục trên Trang chủ | API | Trang đầy đủ |
+|---|---|---|
+| Phổ biến tại Việt Nam | `geo.getTopTracks` (`country=Viet Nam`) | `/charts/vietnam` |
+| Thịnh hành toàn cầu | `chart.getTopTracks` | `/charts/global` |
+| Nghệ sĩ nổi bật tại Việt Nam | `geo.getTopArtists` (`country=Viet Nam`) | `/artists`, `/artist/:tên` |
+
+- **Tải dữ liệu:**
+  - Trang chủ hiện 20 mục mỗi phần.
+  - "Xem tất cả" mở danh sách đầy đủ; danh sách tải thêm 20 mục khi bấm "Tải thêm" hoặc cuộn xuống cuối.
+  - Mỗi bảng phân trang riêng và không lặp lại mục trùng giữa các trang.
+- **Cache (localStorage):**
+  - bảng bài hát: 45 phút;
+  - nghệ sĩ: 8 giờ.
+  
+  Các yêu cầu giống nhau đang chạy dùng chung một lần gọi. Nếu Last.fm lỗi mà còn bản cũ thì hiển thị bản cũ.
+- **Xử lý lỗi:**
+  - Mỗi lần gọi có thời gian chờ 10 giây.
+  - Lỗi mạng hoặc lỗi máy chủ được thử lại một lần.
+  - Lỗi giới hạn lượt gọi (29) và khóa sai (10/26/4) không tự thử lại.
+  - Lỗi hiện ngay trong phần đó, kèm nút "Thử lại"; Trang chủ và các phần khác vẫn hoạt động.
+- **Ảnh:** Last.fm đã ngừng cung cấp ảnh nghệ sĩ, và bảng xếp hạng chỉ trả về ảnh "ngôi sao" mặc định. App bỏ ảnh mặc định đó và lấy ảnh từ các nguồn sau:
+  - **Ảnh nghệ sĩ** (`src/artists/artistImages.ts`), theo thứ tự:
+    1. ảnh thật từ Last.fm (nếu có);
+    2. ảnh trên **Wikimedia Commons** qua Wikidata: tìm theo mã MusicBrainz, hoặc theo đúng tên nhưng chỉ nhận ca sĩ/nhóm nhạc; trùng tên thì ưu tiên nghệ sĩ Việt Nam, vẫn không rõ thì không lấy ảnh;
+    3. ảnh kênh YouTube của nghệ sĩ: lấy khi mở trang nghệ sĩ (`channels.list`, 1 đơn vị quota) và nhớ lại cho Trang chủ;
+    4. chữ cái đầu tên.
+    
+    Ảnh được nhớ 30 ngày; trang nghệ sĩ ghi nguồn ảnh.
+  - **Ảnh bài hát:** bìa album từ Last.fm `track.getInfo`, chỉ tải cho thẻ đang hiện trên màn hình, 3 yêu cầu cùng lúc, nhớ 14 ngày. Không có bìa thì dùng thumbnail YouTube (sau khi bài đã được tìm), rồi đến ảnh minh họa. Thẻ bài hát hình vuông.
+  - Không bao giờ hiện ảnh hỏng.
+- **Chọn một bài (`src/charts/resolve.ts`, `match.ts`):**
+  - App tìm trên YouTube với từ khóa `nghệ sĩ - tên bài`, trong danh mục Âm nhạc.
+  - Chỉ chọn video đúng tên bài, đúng nghệ sĩ và đúng phiên bản; bản gốc không bao giờ bị thay bằng cover, remix, live hay karaoke.
+  - Thứ tự ưu tiên: kênh *Topic* › *Official Audio* › *Official MV*.
+  - Kết quả được nhớ 7 ngày (không tìm thấy: 1 giờ), nên mỗi bài chỉ tốn một lượt tìm.
+  - App không tìm hàng loạt; chỉ tìm khi người dùng chọn bài.
+  - Không tìm thấy thì hiện thông báo và không phát bài khác.
+
 ## Kiểm thử
 
-- `npm test`: 64 unit test cho hàng đợi, tốc độ, lưu trạng thái, parser LRC, Pomodoro, thống kê, cài đặt, tìm kiếm, nhận diện bài hát (`identity.test.ts`) và thuật toán gợi ý.
+- `e2e/popular-artists.cjs`, `e2e/popular-charts.cjs`: Last.fm và YouTube giả lập. Kiểm tra:
+  - tham số gọi API;
+  - phân trang độc lập và chống trùng;
+  - ảnh thiếu;
+  - chọn đúng video;
+  - phát và thêm vào hàng đợi;
+  - lỗi 29, lỗi mạng và hết thời gian chờ;
+  - bố cục ở 390 px, Car View 800×480 và 1024×600, và 1920 px.
+  
+  Cần bản build có API: `VITE_YOUTUBE_API_KEY=TEST_KEY VITE_LASTFM_API_KEY=TEST npx vite build --outDir /tmp/dist-api && npx vite preview --outDir /tmp/dist-api --port 4174`.
+- `npm test`: 72 unit test cho hàng đợi, tốc độ, lưu trạng thái, parser LRC, Pomodoro, thống kê, cài đặt, tìm kiếm, nhận diện bài hát (`identity.test.ts`) và thuật toán gợi ý.
   - Phần gợi ý kiểm tra: cùng bài khác ID video, Audio/MV/Lyrics, Remix/Live, bài khác cùng nghệ sĩ, cùng phong cách khác nghệ sĩ, đa dạng nghệ sĩ, bài vừa nghe, bài không thích, chống trùng khi thêm vào hàng đợi, ít/không có ứng viên, và làm mới nhiều lần.
 - `e2e/voice-mic-release.cjs`: kiểm tra micro được giải phóng ở mọi tình huống kết thúc tìm kiếm bằng giọng nói, nhạc tạm dừng và không tự phát lại.
 - `e2e/perf-web-vitals.cjs`, `e2e/perf-car-profile.cjs`, `e2e/perf-memory-nav.cjs`: đo hiệu năng.
@@ -368,13 +421,12 @@ Giao diện theo template **"C · Tracklist gọn"**: nền than ấm, màu nh�
 | Viền | `rgba(255,255,255,0.14)` / `0.08` |
 
 **Danh sách bài dạng tracklist** (`TrackList` + `VideoRow`), dùng cho kết quả tìm kiếm, Thư viện, Playlist và Trang chủ:
-- Các cột: # · Tiêu đề (ảnh 72×40) · Kênh · Lượt xem · thao tác · thời lượng.
+- Các cột: # · Tiêu đề (ảnh 72×40, thời lượng hiện ngay trên ảnh) · Kênh · Lượt xem · thao tác.
 - Khi rê chuột: số thứ tự đổi thành nút ▶ và hiện các nút MP3 / Thêm vào hàng đợi / Thêm.
 - Bài đang phát hiện equalizer.
 - Khi vùng nội dung hẹp (ví dụ đang mở bảng Hàng đợi), danh sách tự ẩn cột Lượt xem rồi đến cột Kênh.
 - Ở Car View, tên kênh nằm dưới tên bài và nút luôn hiện, cỡ ≥ 44 px.
 
 **Trang kết quả tìm kiếm:**
-- Nút "Phát tất cả" phát các kết quả đang hiển thị theo thứ tự.
 - Bấm một dòng thì chỉ phát bài đó.
 - Bộ lọc **Tất cả / Bài hát / Video**. "Bài hát" là video thuộc danh mục Âm nhạc, kênh "- Topic", hoặc bản Official/"Nghệ sĩ - Tên bài" dài 1–15 phút. Còn lại (mix dài, livestream, talk show…) là "Video".

@@ -208,5 +208,21 @@ async function searchUncached(query: string, opts: { pageToken?: string | null; 
   return { items, nextPageToken: data.nextPageToken || null, source: 'youtube' };
 }
 
+/** Channel pictures (channels.list, 1 quota unit for up to 50 channels). */
+export async function getChannelThumbnails(ids: string[]): Promise<Record<string, string>> {
+  if (!API_KEY || !ids.length) return {};
+  const params = new URLSearchParams({ part: 'snippet', id: ids.slice(0, 50).join(','), key: API_KEY });
+  const res = await fetch(`${API}/channels?${params}`);
+  if (!res.ok) throw new Error(`Lỗi YouTube API (${res.status})`);
+  const data: { items?: { id: string; snippet?: { thumbnails?: Record<string, { url?: string }> } }[] } = await res.json();
+  const out: Record<string, string> = {};
+  for (const c of data.items ?? []) {
+    const th = c.snippet?.thumbnails;
+    const url = th?.medium?.url || th?.high?.url || th?.default?.url;
+    if (url?.startsWith('https://')) out[c.id] = url;
+  }
+  return out;
+}
+
 export const watchUrl = (track: Track): string | null =>
   track.provider === 'youtube' && track.videoId ? `https://www.youtube.com/watch?v=${track.videoId}` : null;

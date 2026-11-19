@@ -49,7 +49,14 @@ export default function VideoRow({ track, index, list, onRemove, removeLabel, ex
         <span className="tl-num__play" aria-hidden="true">{playing ? <Pause size={16} fill="currentColor" strokeWidth={0} /> : <Play size={16} fill="currentColor" strokeWidth={0} />}</span>
       </span>
       <div role="cell" className="tl-title">
-        <span className="video-row__thumb"><Artwork track={track} small /></span>
+        <span className="video-row__thumb">
+          <Artwork track={track} small />
+          {(track.isLive || track.duration > 0) && (
+            <span className={`thumb-time${track.isLive ? ' thumb-time--live' : ''}`} aria-label={track.isLive ? 'Đang phát trực tiếp' : `Thời lượng ${formatTime(track.duration)}`}>
+              {track.isLive ? 'LIVE' : formatTime(track.duration)}
+            </span>
+          )}
+        </span>
         <span className="tl-title__text">
           <span className="video-row__title" title={track.title}>{track.title}</span>
           {(failed || extraMeta) && (
@@ -69,9 +76,6 @@ export default function VideoRow({ track, index, list, onRemove, removeLabel, ex
         </button>
         <MoreMenu track={track} onRemove={onRemove} removeLabel={removeLabel} showLabel={false} />
       </div>
-      <span role="cell" className="tl-dur">
-        {track.isLive ? <span className="live-pill">LIVE</span> : track.duration ? formatTime(track.duration) : '—'}
-      </span>
     </div>
   );
 }

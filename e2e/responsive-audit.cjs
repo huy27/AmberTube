@@ -44,7 +44,7 @@ const probe = () => {
     }
   }
   // text that is cut without an ellipsis
-  for (const el of document.querySelectorAll('h1, h2, h3, p, span:not(.sr-only), strong')) {
+  for (const el of document.querySelectorAll('h1:not(.sr-only), h2, h3, p, span:not(.sr-only), strong')) { // .sr-only is visually hidden on purpose
     if (!vis(el) || hidden(el) || el.children.length > 2) continue;
     const s = getComputedStyle(el);
     if (el.scrollWidth > el.clientWidth + 2 && s.overflow !== 'visible' && s.textOverflow !== 'ellipsis' && !s.webkitLineClamp?.match(/\d/) && el.clientWidth > 0 && !scroller(el)?.matches('.shelf__row, .mood-grid, .tl-filters, .chips, .artist-row, .seg')) {

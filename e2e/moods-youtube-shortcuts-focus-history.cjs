@@ -89,7 +89,7 @@ const FAKE_YT = () => {
   await p.waitForSelector('.video-row:not(.video-row--skeleton)');
   await p.click('.video-row >> nth=0');
   await p.waitForTimeout(600);
-  await p.locator('.page-title, .tl-header__title').first().click(); // focus something neutral
+  await p.evaluate(() => document.activeElement?.blur()); // focus nothing in particular
   const t0 = await p.textContent('.player__title');
   await p.keyboard.press('Space');
   check('Space pauses', (await p.getAttribute('.play-btn', 'aria-label')) === 'Phát');

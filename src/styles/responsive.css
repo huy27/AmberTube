@@ -21,7 +21,9 @@
   .toggle { width: 52px; height: 30px; border-radius: 15px; }
   .toggle__knob { width: 24px; height: 24px; }
   .toggle.is-on .toggle__knob { transform: translateX(22px); }
-  .mood__radio { top: 4px; right: 4px; }
+  .mood__radio { top: 8px; right: 8px; }
+  .mood-shelf__all { min-height: 44px; }
+  .round-btn { width: 44px; height: 44px; }
   .seg__btn { padding-inline: 14px; }
   .tl-filter { height: 44px; }
   .tracklist { --tl-act: 168px; --tl-act-sm: 92px; } /* MP3 + two 44px buttons */
@@ -44,3 +46,4 @@
 .diag__list { margin: 0; padding: 6px 8px; overflow: auto; list-style: none; }
 .diag__list time { color: var(--text-3); }
 .app--compact ~ .diag, .mode-car .diag { bottom: calc(var(--car-player-h) + 8px); }
+@media (pointer: coarse) { .artist-card { min-height: 44px; } }

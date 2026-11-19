@@ -87,3 +87,32 @@ export interface Lyrics {
   lines: LyricLine[];
   source: string;
 }
+
+/** An artist from a chart (Last.fm). Fields the source doesn't provide are null — never guessed. */
+export interface Artist {
+  name: string;
+  mbid: string | null;
+  url: string | null;
+  image: string | null;
+  listeners: number | null;
+  playcount: number | null;
+  rank: number;
+}
+
+export type ChartSource = 'vietnam' | 'global';
+
+/**
+ * A track from a Last.fm chart: metadata only (Last.fm has no playable audio). It becomes a playable
+ * `Track` once matched to a YouTube upload (see charts/resolve.ts). Missing fields are null.
+ */
+export interface ChartTrack {
+  key: string; // normalized "artist|title" — identity used for de-duplication
+  title: string;
+  artist: string;
+  image: string | null;
+  url: string | null;
+  listeners: number | null;
+  playcount: number | null;
+  rank: number;
+  source: ChartSource;
+}

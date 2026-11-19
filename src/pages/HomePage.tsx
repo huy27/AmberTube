@@ -3,7 +3,9 @@ import { Play, Radio, Sparkles, Check } from 'lucide-react';
 import TrackCard from '../components/TrackCard';
 import VideoRow from '../components/VideoRow';
 import TrackList from '../components/TrackList';
-import MoodGrid from '../components/MoodGrid';
+import { MoodShelf } from '../components/MoodGrid';
+import PopularArtistsShelf from '../artists/PopularArtistsShelf';
+import ChartShelf from '../charts/ChartShelf';
 import RecoCard from '../components/RecoCard';
 import Shelf from '../components/Shelf';
 import Artwork from '../components/Artwork';
@@ -180,8 +182,10 @@ export default function HomePage() {
       <section className="page page--car">
         {continueShelf}
         {mixRow}
-        <h2 className="section-title">Tâm trạng &amp; Khám phá</h2>
-        <MoodGrid />
+        <MoodShelf />
+        <ChartShelf source="vietnam" />
+        <PopularArtistsShelf />
+        <ChartShelf source="global" />
         {!recsReady ? <ShelfSkeleton /> : recs.coldStart ? <ColdStart /> : recs.madeForYou.length > 0 && (
           <Shelf id="sh-mfy" title="Dành cho bạn">
             {recs.madeForYou.slice(0, 6).map((t) => <RecoCard key={t.id} track={t} list={recs.madeForYou} />)}
@@ -200,11 +204,13 @@ export default function HomePage() {
     <section className="page">
       <h1 className="page-title">{greeting()}</h1>
 
-      <h2 className="section-title section-title--first">Tâm trạng &amp; Khám phá</h2>
-      <MoodGrid />
+      <MoodShelf first />
 
       {continueShelf}
       {personal}
+      <ChartShelf source="vietnam" />
+      <ChartShelf source="global" />
+      <PopularArtistsShelf />
 
       {featured.length > 0 && (
         <>

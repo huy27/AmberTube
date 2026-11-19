@@ -5,6 +5,7 @@ interface ImportMetaEnv {
   readonly VITE_CONVERSION_ENDPOINT?: string;
   readonly VITE_AUTHORIZED_CHANNEL_IDS?: string;
   readonly VITE_LYRICS_ENDPOINT?: string;
+  readonly VITE_LASTFM_API_KEY?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

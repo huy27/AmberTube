@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc",
-    "test": "node --experimental-strip-types --no-warnings --test src/playback/*.test.ts src/focus/*.test.ts src/search/*.test.ts src/recommend/*.test.ts",
+    "test": "node --experimental-strip-types --no-warnings --test src/playback/*.test.ts src/focus/*.test.ts src/search/*.test.ts src/recommend/*.test.ts src/artists/*.test.ts src/charts/*.test.ts",
     "preview": "vite preview",
     "test:e2e": "node e2e/run.cjs"
   },

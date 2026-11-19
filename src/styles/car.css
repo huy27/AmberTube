@@ -75,8 +75,6 @@ html.kb-open .app--compact .player--car { display: none; }
 .app--compact .mix-card__play { height: var(--tap); padding: 0 22px; font-size: 16px; }
 
 /* Mood cards: one swipeable row */
-.app--compact .mood-grid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 150px; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 6px; }
-.app--compact .mood { height: 76px; scroll-snap-align: start; padding: 12px; }
 .app--compact .chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
 .app--compact .chip { height: 44px; padding: 0 16px; font-size: 15px; flex-shrink: 0; }
 .app--compact .cold { padding: 12px 14px; margin-top: 14px; }
@@ -154,8 +152,6 @@ html.kb-open .app--compact .player--car { display: none; }
   .app--compact .shelf { margin-top: 12px; }
   .app--compact .shelf__row { grid-auto-columns: 156px; }
   .app--compact .reco-card__main { padding: 4px; }
-  .app--compact .mood { height: 64px; }
-  .app--compact .mood__icon svg { width: 18px; height: 18px; }
   .cplayer__art { width: 56px; height: 56px; }
   .cbtn--play { width: 58px; height: 58px; }
   .cbtn--xxl { width: 72px; height: 72px; }
@@ -183,7 +179,7 @@ html.kb-open .app--compact .player--car { display: none; }
 
 /* Tracklist in Car View / narrow screens: # · title (+channel) · actions · duration, 44px+ touch targets */
 .app--compact .tracklist-wrap { margin: 0 -8px; overflow-x: visible; }
-.app--compact .tracklist { --tl-cols: 28px minmax(0, 1fr) 108px 48px; min-width: 0; }
+.app--compact .tracklist { --tl-cols: 28px minmax(0, 1fr) 108px; min-width: 0; }
 .app--compact .tracklist .tl-channel, .app--compact .tracklist .tl-views { display: none; }
 .app--compact .tracklist__head { height: 32px; padding: 0 8px; }
 .app--compact .video-row { height: auto; min-height: 72px; padding: 6px 8px; gap: 10px; }
@@ -195,7 +191,7 @@ html.kb-open .app--compact .player--car { display: none; }
 .app--compact .tl-icon, .app--compact .video-row .more__btn { width: var(--tap); height: var(--tap); border-radius: 12px; }
 @media (max-width: 560px) {
   .app--compact .tracklist { --tl-cols: minmax(0, 1fr) 108px; }
-  .app--compact .tracklist .tl-num, .app--compact .tracklist .tl-dur, .app--compact .tracklist__head { display: none; }
+  .app--compact .tracklist .tl-num, .app--compact .tracklist__head { display: none; }
 }
 .app--compact .tl-header { gap: 12px; margin-bottom: 14px; }
 .app--compact .tl-header__title { font-size: 22px; }
@@ -339,4 +335,20 @@ html.mode-car .np { animation: none; }
   .np__art { width: min(60vw, 28vh); }
   .np__head { gap: 10px; }
   .np__body { gap: 12px; }
+}
+
+/* Mood tiles in compact layouts: swipeable row on Home, 2+ column grid on the "see all" page */
+.app--compact .mood-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.app--compact .mood-grid--row { grid-template-columns: none; grid-auto-columns: 168px; }
+.app--compact .mood-grid--row .mood-wrap { min-width: 168px; }
+.app--compact .mood { height: 100px; padding: 12px 14px; }
+.app--compact .mood__radio { top: 10px; right: 10px; }
+.app--compact .mood-shelf__nav .round-btn { display: none; } /* swipe instead */
+.app--compact .mood-shelf__all { min-height: 44px; padding: 0 10px; }
+.app--compact .mood-shelf { margin-top: 18px; }
+@media (max-height: 620px) {
+  .app--compact .mood { height: 88px; padding: 10px 12px; }
+  .app--compact .mood__icon { width: 32px; height: 32px; border-radius: 9px; }
+  .app--compact .mood__icon svg { width: 18px; height: 18px; }
+  .app--compact .mood__label { font-size: 15px; }
 }

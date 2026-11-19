@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SearchX, AlertTriangle, Play } from 'lucide-react';
+import { SearchX, AlertTriangle } from 'lucide-react';
 import VideoRow from '../components/VideoRow';
 import TrackList from '../components/TrackList';
-import { usePlayer } from '../context/PlayerContext';
 import { isSongLike } from '../recommend/identity';
 import EmptyState from '../components/EmptyState';
 import MoodGrid from '../components/MoodGrid';
@@ -30,7 +29,6 @@ function SkeletonRow() {
       <span className="tl-channel"><span className="sk sk--line sk--sm" style={{ width: '70%', margin: 0 }} /></span>
       <span className="tl-views" />
       <span className="tl-actions" />
-      <span className="tl-dur"><span className="sk sk--line sk--sm" style={{ width: 32, margin: 0 }} /></span>
     </div>
   );
 }
@@ -44,7 +42,6 @@ export default function SearchPage() {
   const [state, setState] = useState<State>({ status: 'idle', items: [], next: null, source: null, error: null });
   const [loadingMore, setLoadingMore] = useState(false);
   const { addSearch } = useSearchHistory();
-  const { playTrack } = usePlayer();
   const [filter, setFilter] = useState<Filter>('all');
   useEffect(() => setFilter('all'), [q]);
   const counts = useMemo(() => {
@@ -106,19 +103,8 @@ export default function SearchPage() {
   return (
     <section className="page">
       <div className="tl-header">
-        <button
-          type="button"
-          className="tl-header__play"
-          aria-label="Phát tất cả"
-          title="Phát tất cả kết quả theo thứ tự"
-          disabled={!ready || !shown.length}
-          onClick={() => playTrack(shown[0], shown)}
-        >
-          <Play size={22} fill="currentColor" strokeWidth={0} />
-        </button>
-        <div className="tl-header__text">
-          <h1 className="tl-header__title page-title__q" aria-label={`Kết quả cho ${q}`}>“{q}”</h1>
-        </div>
+        {/* the query is already in the search box: keep the heading for screen readers only */}
+        <h1 className="sr-only">Kết quả tìm kiếm cho “{q}”</h1>
         <div role="group" aria-label="Lọc kết quả" className="tl-filters">
           {FILTERS.map(([id, label]) => (
             <button key={id} type="button" className="tl-filter" aria-pressed={filter === id} onClick={() => setFilter(id)} disabled={!ready}>
