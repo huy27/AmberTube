@@ -41,7 +41,8 @@ The owner writes in **Vietnamese**. Reply in Vietnamese, concisely. Keep all UI 
 ### Honesty
 - Never claim results from physical devices (iPhone, CarPlay, VF5) that were not actually tested. Say "chưa
   thử trên máy thật" (not yet tried on a real device).
-- Real-device behaviour of CarPlay mic routing and iOS background audio is still unverified.
+- Voice search mic works in APTV on the real device (owner, 2026-11-20). Still unverified: audio routing after
+  the mic (auto-resume after results) and iOS background audio.
 
 ### Car View (VF5)
 - Screens: 800×480 and 1024×600 landscape; also any width ≤ 700 px or height ≤ 500 px (the `compact` layout).
@@ -216,13 +217,10 @@ Benchmarks to keep (heavy user, 4× CPU, slow 3G):
 
 ## 8. Open items / waiting on the owner
 
-1. **APTV (CarPlay browser) mic "không hỗ trợ".** Options offered, no answer yet:
-   - a state-preserving "Khôi phục âm thanh" reload;
-   - an experimental player re-create button in diag;
-   - hiding the mic;
-   - contacting the APTV developer.
-
-   Today the mic falls back to typed search there.
+1. **APTV (CarPlay browser) mic: resolved.** On 2026-11-20 the owner reported that the mic works in APTV on the
+   real device. The old "không hỗ trợ" options (reload, player re-create, hide mic, contact APTV) are dropped. The
+   typed-search fallback stays for browsers without speech recognition. Still unverified on the real device: the
+   new auto-resume of the paused song after voice results (audio routing back from the mic).
 2. **Repo hygiene, offered and not chosen:** git + CI, ESLint, dependency upgrades / `npm audit`.
 3. **More sync, suggested and not chosen:**
    - "continue on another device" (resume banner, never auto-overwrite);
