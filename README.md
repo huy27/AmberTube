@@ -292,6 +292,18 @@ Thử điều hướng 400 lần giữa các trang trong khi phát nhạc (`e2e/
 - **Màn hình khóa (Media Session):** hiện tên bài, nghệ sĩ và ảnh bìa nhiều cỡ. Các nút phát, tạm dừng, bài trước, bài sau, tua và kéo thanh thời gian đều dùng được, kèm trạng thái phát và vị trí phát.
 - **Khi quay lại Safari:** app đọc trạng thái thật của trình phát để giao diện không báo "đang phát" khi thực tế đã dừng. App không bao giờ tự tạm dừng chỉ vì trang bị ẩn.
 
+## Tìm bằng giọng nói trong Car View
+
+- Mở bằng **nút mic lớn "Nói"** trên thanh phát của Car View, nút **"Nói tên bài"** trong màn hình Đang phát, hoặc mic trên thanh tìm kiếm.
+- Màn hình nghe phủ toàn màn hình, có mic lớn và chữ bạn nói hiện to ngay khi nói. Chạm vào màn hình khi nói xong; nút **Hủy** lớn.
+- **Không bật bàn phím ảo.** Nói xong app tự tìm và hiện kết quả dạng thẻ lớn:
+  - Bài khớp nhất được ưu tiên bản chính thức (Topic / Official), xếp trên cover, karaoke, remix trừ khi bạn nói rõ phiên bản đó.
+  - Bài này **tự phát sau 3 giây**; bấm "Không phát" để chọn bài khác.
+- Khi không nghe rõ, có lỗi, hoặc khi hủy: hiện nút lớn **"Nói lại"** và **"Tiếp tục nhạc"**.
+- Nhạc dừng khi bắt đầu nghe và **không tự phát lại**, vì liên quan đến đường âm thanh qua CarPlay. "Tiếp tục nhạc" phát lại đúng bài đang nghe.
+- Trình duyệt không hỗ trợ nhận giọng nói: nút mic chuyển sang ô gõ chữ, nhạc vẫn phát.
+- Giao diện máy tính giữ nguyên cách tìm bằng giọng nói ngay trong thanh tìm kiếm.
+
 ## Tìm kiếm bằng giọng nói và CarPlay
 
 - **Chỉ tìm bằng giọng nói (nút micro) mới tạm dừng nhạc.** Gõ phím để tìm, kể cả nút "Tìm bài" ở màn hình Đang phát, chỉ mở ô gõ: nhạc vẫn phát, không bật micro.

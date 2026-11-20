@@ -1,4 +1,5 @@
-import { SkipBack, SkipForward, Play, Pause, Loader2, MoreHorizontal, Shuffle, Repeat, Repeat1, ListMusic, MicVocal, Timer, Infinity as InfinityIcon, ChevronUp } from 'lucide-react';
+import { SkipBack, SkipForward, Play, Pause, Loader2, MoreHorizontal, Shuffle, Repeat, Repeat1, ListMusic, MicVocal, Timer, Infinity as InfinityIcon, ChevronUp, Mic } from 'lucide-react';
+import { openCarVoice } from '../voice/CarVoiceSearch';
 import Artwork from './Artwork';
 import ProgressBar from './ProgressBar';
 import Popover from './Popover';
@@ -43,6 +44,9 @@ export default function CarPlayerBar() {
       </div>
 
       <div className="cplayer__side">
+        <button className="cbtn cbtn--mic" onClick={openCarVoice} aria-label="Tìm bằng giọng nói" title="Tìm bằng giọng nói">
+          <Mic size={26} /><span className="cbtn__label">Nói</span>
+        </button>
         <button className={`cbtn cbtn--toggle${autoplay.enabled ? ' is-on' : ''}`} onClick={() => setAutoplay(!autoplay.enabled)} aria-pressed={autoplay.enabled}
           aria-label={autoplay.enabled ? 'Tự động phát: bật' : 'Tự động phát: tắt (hết bài là dừng)'} title="Tự động phát">
           <InfinityIcon size={24} /><span className="cbtn__label">Tự phát</span>

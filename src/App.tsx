@@ -31,6 +31,7 @@ import { DisplayModeProvider, useDisplayMode } from './context/DisplayModeContex
 import CarSuggestionBanner from './components/CarSuggestionBanner';
 import CarPlayerBar from './components/CarPlayerBar';
 import NowPlaying from './components/NowPlaying';
+import CarVoiceSearch from './voice/CarVoiceSearch';
 import { ListeningStoreProvider } from './recommend/ListeningStore';
 import { RecommendationProvider } from './recommend/RecommendationProvider';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -86,6 +87,7 @@ function Shell() {
       </main>
       {compact ? <CarPlayerBar /> : <PlayerBar />}
       {compact && <NowPlaying />}
+      {compact && <CarVoiceSearch />}
     </div>
   );
 }

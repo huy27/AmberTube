@@ -4,6 +4,7 @@ import { Search, X, Mic, MicOff, History, TrendingUp, Music2, User, Video, Tv, L
 import type { LucideIcon } from 'lucide-react';
 import Artwork from './Artwork';
 import { useSpeechRecognition, VOICE_ERROR_MESSAGES, type VoiceError } from '../hooks/useSpeechRecognition';
+import { openCarVoice } from '../voice/CarVoiceSearch';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useToast } from '../context/ToastContext';
@@ -97,6 +98,8 @@ export default function SearchBox() {
   };
 
   const toggleVoice = () => {
+    // Car View: the big full-screen voice search (no keyboard popping up, results to tap or auto-play)
+    if (compact && voice.supported) return openCarVoice();
     if (!voice.supported) {
       toast('Trình duyệt này không hỗ trợ tìm kiếm bằng giọng nói. Bạn hãy gõ để tìm nhé.', { type: 'warning' });
       inputRef.current?.focus();
