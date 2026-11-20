@@ -1,7 +1,8 @@
-// Car View voice search: a full-screen "listening" view with big text, then large result cards and a
-// 3-second countdown that plays the best match by itself — no keyboard, nothing small to read or hit.
-// Music is paused while listening and is NOT resumed automatically (CarPlay audio routing); a big
-// "Tiếp tục nhạc" button resumes it with one tap.
+// Car View voice search: a full-screen "listening" view with big text, then large result cards the user
+// taps to play (nothing plays by itself) — no keyboard, nothing small to read or hit.
+// Music is paused while listening (mic and music don't mix). Once results are shown and the mic is released,
+// the song that was playing continues until the user picks another one. On cancel / errors it stays paused
+// and a big "Tiếp tục nhạc" button resumes it with one tap.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mic, X, RotateCcw, Play, Search, Loader2 } from 'lucide-react';
@@ -10,6 +11,7 @@ import Artwork from '../components/Artwork';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useSearchHistory } from '../search/SearchHistoryContext';
+import { useUI } from '../context/UIContext';
 import { useSpeechRecognition, type VoiceError } from '../hooks/useSpeechRecognition';
 import { searchVideos } from '../services/youtube';
 import { formatTime } from '../services/format';
@@ -18,7 +20,6 @@ import { rankForVoice } from './rank';
 /** Ask the Car View voice search to start (mic buttons in the car bar, Now Playing, the search bar). */
 export const openCarVoice = () => window.dispatchEvent(new CustomEvent('ambertube:voice'));
 
-const COUNTDOWN = 3;
 type Phase = 'closed' | 'listening' | 'searching' | 'results' | 'problem';
 
 const PROBLEM: Record<VoiceError | 'none' | 'cancelled' | 'empty' | 'search', string> = {
@@ -44,13 +45,13 @@ export default function CarVoiceSearch() {
   const p = usePlayer();
   const { settings, updateSettings } = useLibrary();
   const history = useSearchHistory();
+  const ui = useUI();
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>('closed');
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Track[]>([]);
   const [problem, setProblem] = useState<keyof typeof PROBLEM>('none');
-  const [count, setCount] = useState<number | null>(null);
   const pausedByUs = useRef(false);
   const textRef = useRef('');
   const phaseRef = useRef<Phase>('closed');
@@ -73,7 +74,6 @@ export default function CarVoiceSearch() {
       const ranked = rankForVoice(q, r.items).slice(0, 5);
       if (!ranked.length) return showProblem('empty');
       setResults(ranked);
-      setCount(COUNTDOWN);
       setPhase('results');
     } catch {
       if (my === seq.current) showProblem('search');
@@ -105,7 +105,8 @@ export default function CarVoiceSearch() {
 
   const start = useCallback(() => {
     if (!voice.supported) {
-      // e.g. some car browsers: type instead (the music keeps playing)
+      // e.g. some car browsers: type instead (the music keeps playing). Now Playing covers the search bar.
+      ui.setNowPlaying(false);
       window.dispatchEvent(new CustomEvent('ambertube:find', { detail: { voice: false } }));
       return;
     }
@@ -117,10 +118,9 @@ export default function CarVoiceSearch() {
     textRef.current = '';
     setText('');
     setResults([]);
-    setCount(null);
     setPhase('listening');
     voice.start();
-  }, [voice, p]);
+  }, [voice, p, ui]);
   const startRef = useRef(start);
   startRef.current = start;
 
@@ -133,7 +133,6 @@ export default function CarVoiceSearch() {
   const close = useCallback(() => {
     seq.current++;
     voice.cancel();
-    setCount(null);
     setPhase('closed');
   }, [voice]);
 
@@ -149,16 +148,12 @@ export default function CarVoiceSearch() {
     close();
   };
 
-  // the best match plays by itself after 3 seconds (any tap on the card list stops the countdown)
+  // results are on screen and the mic is released: carry on with the song we paused until the user picks one
   useEffect(() => {
-    if (phase !== 'results' || count === null) return;
-    if (count <= 0) {
-      if (results[0]) play(results[0]);
-      return;
-    }
-    const id = setTimeout(() => setCount((c) => (c === null ? null : c - 1)), 1000);
-    return () => clearTimeout(id);
-  }, [phase, count, results, play]);
+    if (phase !== 'results' || voice.listening || !pausedByUs.current) return;
+    pausedByUs.current = false;
+    if (p.track && !p.isPlaying) p.play();
+  }, [phase, voice.listening, p]);
 
   useEffect(() => () => voice.cancel(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -201,13 +196,11 @@ export default function CarVoiceSearch() {
               <span>{top.channel}{top.duration ? ` · ${formatTime(top.duration)}` : ''}</span>
             </span>
             <span className="cvoice__play">
-              {count !== null && count > 0 ? <><span className="cvoice__count" aria-live="polite">{count}</span><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" style={{ animationDuration: `${COUNTDOWN}s` }} /></svg></> : <Play size={30} fill="currentColor" strokeWidth={0} />}
+              <Play size={30} fill="currentColor" strokeWidth={0} />
             </span>
           </button>
           <div className="cvoice__bar">
-            {count !== null && count > 0
-              ? <><span>Tự phát sau {count} giây</span><button className="cvoice__btn cvoice__btn--ghost" onClick={() => setCount(null)}>Không phát</button></>
-              : <span>Chọn bài để phát</span>}
+            <span>Chọn bài để phát</span>
           </div>
           <div className="cvoice__more">
             {results.slice(1).map((t) => (

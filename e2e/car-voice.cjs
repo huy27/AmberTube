@@ -1,4 +1,4 @@
-// Car View voice search: full-screen listening view, results with a 3-second auto-play, big "Nói lại" /
+// Car View voice search: full-screen listening view, results the user taps to play (no auto-play), big "Nói lại" /
 // "Tiếp tục nhạc" buttons, big mic buttons in the car player bar and Now Playing, no on-screen keyboard.
 // Runs on the demo build (http://localhost:4173); the Web Speech API is faked.
 const { chromium } = require('playwright');
@@ -52,18 +52,20 @@ const URL0 = process.env.AMBERTUBE_URL || 'http://localhost:4173';
     check(`${tag}: words appear in big text while speaking`, (await p.textContent('.cvoice__heard')) === 'sun');
     const fontPx = await p.$eval('.cvoice__heard', (e) => parseFloat(getComputedStyle(e).fontSize));
     check(`${tag}: text is large (≥ 22 px)`, fontPx >= 22, `${fontPx}px`);
-    // 2. final result → results with a countdown → plays by itself
+    // 2. final result → results; the paused song carries on, tapping the top card plays it
     await say(p, 'sunset', true);
     await p.waitForSelector('.cvoice--results', { timeout: 5000 });
     const top = await p.textContent('.cvoice__top strong');
-    check(`${tag}: results: best match first with a 3-second countdown`, top.length > 0 && (await p.textContent('.cvoice__count')) === '3' && /Tự phát sau 3 giây/.test(await p.textContent('.cvoice__bar')));
+    check(`${tag}: results: best match first, no auto-play countdown`, top.length > 0 && !(await p.$('.cvoice__count')) && /Chọn bài để phát/.test(await p.textContent('.cvoice__bar')));
     check(`${tag}: mic released once a result arrived`, !(await rec(p)).active);
     const over = await p.evaluate(() => document.querySelector('.cvoice').scrollWidth > innerWidth);
     const small = await p.$$eval('.cvoice button', (bs) => bs.filter((x) => x.offsetParent && x.getBoundingClientRect().height < 44).map((x) => x.textContent || x.getAttribute('aria-label')));
     check(`${tag}: results fit (no sideways overflow), every button ≥ 44 px tall`, !over && small.length === 0, small.join(','));
     await p.screenshot({ path: `/tmp/car-voice-results-${vp.width}.png` });
     await p.waitForTimeout(3600);
-    check(`${tag}: after 3 s the best match plays and the view closes`, !(await p.$('.cvoice')) && (await title(p)) === top && await playing(p), await title(p));
+    check(`${tag}: results shown → the song that was playing continues (nothing new starts)`, Boolean(await p.$('.cvoice--results')) && await playing(p) && (await title(p)) === song0, await title(p));
+    await p.click('.cvoice__top'); await p.waitForTimeout(400);
+    check(`${tag}: tap the best match → it plays and the view closes`, !(await p.$('.cvoice')) && (await title(p)) === top && await playing(p), await title(p));
     // 3. cancel → "Tiếp tục nhạc" resumes the same song
     const song1 = await title(p);
     await p.click('.cbtn--mic'); await p.waitForSelector('.cvoice--listening');
@@ -83,16 +85,16 @@ const URL0 = process.env.AMBERTUBE_URL || 'http://localhost:4173';
     await p.click('.cvoice__heard');
     await p.waitForSelector('.cvoice--results', { timeout: 6000 });
     check(`${tag}: tap when done → searches what was heard`, /acoustic/.test(await p.textContent('.cvoice__q')));
-    // 6. "Không phát" stops the countdown; tapping another result plays it
-    await p.click('.cvoice__bar button:has-text("Không phát")'); await p.waitForTimeout(3600);
-    check(`${tag}: "Không phát" → nothing starts by itself`, Boolean(await p.$('.cvoice--results')) && !(await playing(p)));
+    await p.waitForTimeout(400);
+    check(`${tag}: results → mic released, the paused song continues`, !(await rec(p)).active && await playing(p) && (await title(p)) === song1, await title(p));
+    // 6. tapping another result plays it
     const second = await p.textContent('.cvoice__item >> nth=0 >> strong');
     await p.click('.cvoice__item >> nth=0'); await p.waitForTimeout(400);
     check(`${tag}: tap another result → it plays`, (await title(p)) === second && await playing(p));
     // 7. Now Playing + search-bar mic open the same view
     await p.click('.cplayer__now'); await p.waitForSelector('.np');
     await p.click('.np__voice'); await p.waitForSelector('.cvoice--listening');
-    check(`${tag}: "Nói tên bài" on Now Playing opens it`, true);
+    check(`${tag}: the mic on Now Playing opens it`, true);
     await p.click('.cvoice__close'); await p.waitForTimeout(200);
     check(`${tag}: close (×) releases the mic`, !(await p.$('.cvoice')) && !(await rec(p)).active);
     await p.click('.np button[aria-label="Quay lại"]'); await p.waitForTimeout(300);
@@ -109,6 +111,9 @@ const URL0 = process.env.AMBERTUBE_URL || 'http://localhost:4173';
     await startSong(p);
     await p.click('.cbtn--mic'); await p.waitForTimeout(300);
     check('no speech support: mic → typing box focused, music keeps playing, no overlay', await p.evaluate(() => document.activeElement?.classList.contains('searchbar__input')) && await playing(p) && !(await p.$('.cvoice')));
+    await p.click('.cplayer__now'); await p.waitForSelector('.np');
+    await p.click('.np__voice'); await p.waitForTimeout(400);
+    check('no speech support: mic on Now Playing → closes it, typing box focused, music keeps playing', !(await p.$('.np')) && await p.evaluate(() => document.activeElement?.classList.contains('searchbar__input')) && await playing(p));
     await ctx.close();
   }
   // desktop keeps the inline voice search

@@ -104,7 +104,7 @@ const { chromium } = require('playwright');
   await p.click('.play-btn'); await p.waitForTimeout(400);
   check('Play resumes the same track', await playing() && (await p.textContent('.player__title')) === time0);
 
-  // Car View: "Tìm bài" on Now Playing opens TYPED search — music keeps playing, no microphone
+  // Car View: typing in the search bar — music keeps playing, no microphone
   const car = await b.newContext({ viewport: { width: 1024, height: 600 }, hasTouch: true });
   await car.addInitScript(() => {
     localStorage.setItem('ambertube:display-mode', 'car'); window.__recs = [];
@@ -115,10 +115,9 @@ const { chromium } = require('playwright');
   await c.waitForSelector('.video-row:not(.video-row--skeleton)');
   await c.click('.video-row >> nth=0'); await c.waitForTimeout(600);
   const carPlaying = async () => (await c.getAttribute('.cbtn--play', 'aria-label')) === 'Tạm dừng';
-  await c.click('.cplayer__info, .cplayer__art'); await c.waitForTimeout(300);
-  await c.click('.np__find'); await c.waitForTimeout(300);
-  check('Car "Tìm bài": keyboard search box focused', await c.evaluate(() => document.activeElement?.classList.contains('searchbar__input')));
-  check('Car "Tìm bài": music keeps playing, mic not used', await carPlaying() && (await c.evaluate(() => window.__recs.length)) === 0);
+  await c.click('.searchbar__input'); await c.waitForTimeout(300);
+  check('Car search box: keyboard search box focused', await c.evaluate(() => document.activeElement?.classList.contains('searchbar__input')));
+  check('Car search box: music keeps playing, mic not used', await carPlaying() && (await c.evaluate(() => window.__recs.length)) === 0);
   await c.keyboard.type('acoustic chill', { delay: 30 }); await c.keyboard.press('Enter'); await c.waitForTimeout(800);
   check('Car keyboard search (with a space typed): music keeps playing', await carPlaying());
   await car.close();

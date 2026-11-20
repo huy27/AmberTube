@@ -50,6 +50,10 @@ export class YouTubeEngine implements PlaybackEngine {
   private poll: ReturnType<typeof setInterval> | null = null;
   private endedFor: string | null = null;
   private slowTimer: ReturnType<typeof setTimeout> | null = null;
+  /** pause() arrived while the video was still loading (the player ignores pauseVideo() then): pause on start */
+  private pauseOnStart = false;
+  /** the current load has reached PLAYING at least once */
+  private started = false;
 
   constructor(private events: EngineEvents, private getHost: () => HTMLElement | null) {}
 
@@ -146,6 +150,15 @@ export class YouTubeEngine implements PlaybackEngine {
       clearTimeout(this.watchdog);
       this.watchdog = null;
     }
+    if (e.data === STATE.PLAYING) this.started = true;
+    if (e.data === STATE.PLAYING && this.pauseOnStart) {
+      // the user paused (e.g. voice search) while it was loading: honour it instead of starting the music
+      this.pauseOnStart = false;
+      diag('yt.pauseOnStart');
+      this.events.onBuffering(false);
+      p.pauseVideo();
+      return;
+    }
     switch (e.data) {
       case STATE.PLAYING: {
         this.events.onBuffering(false);
@@ -174,6 +187,8 @@ export class YouTubeEngine implements PlaybackEngine {
     const p = this.player!;
     this.current = videoId;
     this.endedFor = null;
+    this.pauseOnStart = false;
+    this.started = false;
     this.clearSlow();
     const req = { videoId, startSeconds: Math.floor(opts.startAt) || undefined };
     if (opts.autoplay) {
@@ -230,16 +245,23 @@ export class YouTubeEngine implements PlaybackEngine {
   }
 
   play(): void {
+    this.pauseOnStart = false;
+    if (this.pending) this.pending.opts = { ...this.pending.opts, autoplay: true };
     if (this.ready) this.player!.playVideo();
   }
 
   pause(): void {
-    if (this.ready) this.player!.pauseVideo();
+    // still waiting for the player: load the video without starting it
+    if (this.pending) this.pending.opts = { ...this.pending.opts, autoplay: false };
+    if (!this.ready) return;
+    if (this.current && !this.started) this.pauseOnStart = true;
+    this.player!.pauseVideo();
   }
 
   stop(): void {
     this.pending = null;
     this.current = null;
+    this.pauseOnStart = false;
     this.stopPoll();
     if (this.ready) this.player!.stopVideo();
   }

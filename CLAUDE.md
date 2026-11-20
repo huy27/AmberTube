@@ -29,7 +29,6 @@ The owner writes in **Vietnamese**. Reply in Vietnamese, concisely. Keep all UI 
   - `VITE_SUPABASE_ANON_KEY`
   - `VITE_LYRICS_ENDPOINT`, `VITE_CONVERSION_ENDPOINT`, `VITE_AUTHORIZED_CHANNEL_IDS`
 - Supabase gets the **anon/publishable key only**. `src/services/supabase.ts` refuses `service_role`/`sb_secret_` keys.
-- When packaging a zip, exclude `node_modules`, `dist`, `.env`, `.env.local`, and grep for real keys first.
 
 ### YouTube / playback
 - The hidden player was explicitly allowed by the owner. The ToS risk is documented in the README.
@@ -50,8 +49,10 @@ The owner writes in **Vietnamese**. Reply in Vietnamese, concisely. Keep all UI 
 - Performance mode via `html.mode-car`. Main-thread budget was tuned at 6× CPU throttle; do not regress it.
 
 ### Voice search
-- Pause music before using the mic and **never auto-resume** it (CarPlay audio routing). The user resumes with Play
-  or "Tiếp tục nhạc".
+- Pause music before using the mic. Desktop: never auto-resume (the user resumes with Play). Car View (owner's
+  request, 2026-11-20): once results are shown **and the mic is released**, the paused song continues until the user
+  taps a result; on cancel/errors it stays paused and "Tiếp tục nhạc" resumes it. CarPlay routing of this resume is
+  not yet tested on a real device.
 - The mic must always be released.
 - Never log transcripts (the diagnostics in `?diag=1` log events only).
 - Keyboard search must never pause music.
@@ -71,8 +72,11 @@ The owner writes in **Vietnamese**. Reply in Vietnamese, concisely. Keep all UI 
 ### Style and process
 - Keep the existing UI and architecture: dark charcoal with amber accent, tokens in `src/styles/theme.css`, font
   Be Vietnam Pro. Don't redesign unless asked.
-- Before finishing any task: run tsc, unit tests, the relevant e2e suites, and the responsive audit; build; then
-  package the zip.
+- Before finishing any task: run tsc, unit tests, the relevant e2e suites, and the responsive audit; build.
+  Just update the code: **do not package a zip** (the owner dropped that step, 2026-11-20).
+- Run e2e against a key-less demo build. The local `.env` has real keys, and plain `npx vite build` uses them
+  (tests would hit the real YouTube API and burn quota). Override them, e.g. `VITE_YOUTUBE_API_KEY=
+  VITE_LASTFM_API_KEY= VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= npx vite build --outDir <tmp>`.
 - Report changed files, and give config steps in Vietnamese.
 
 ## 3. Commands
@@ -106,7 +110,7 @@ Pomodoro › **Sync** › routes.
 | Search | `src/services/youtube.ts` (cache, inflight dedupe, `searchMusic` = category 10), `src/search/` | Search costs 100 quota units; `channels.list`/`videos.list` cost 1 |
 | Recommendations | `src/recommend/` (`identity.ts` song identity/versions, `engine.ts`, `listening.ts`, providers) | Smart refill when the queue runs low |
 | Last.fm | `src/services/lastfm.ts`, `src/charts/`, `src/artists/`, `src/lastfm/` | Country must be **"Viet Nam"** ("Vietnam" → error 6). Chart images are placeholders, so album art comes from `track.getInfo` (lazy, cached). Artist photos come from Wikidata/Commons (`artistImages.ts`), falling back to the YouTube channel avatar |
-| Car View | `src/styles/car.css`, `CarPlayerBar`, `NowPlaying`, `CarNavDrawer`, `src/voice/CarVoiceSearch.tsx` | Voice: full-screen listening view, results ranked by `voice/rank.ts`, 3-second auto-play countdown |
+| Car View | `src/styles/car.css`, `CarPlayerBar`, `NowPlaying`, `CarNavDrawer`, `src/voice/CarVoiceSearch.tsx` | Voice: full-screen listening view, results ranked by `voice/rank.ts`, no auto-play (the user taps a result) |
 | Focus mode | `src/focus/` (`/focus`) | Pomodoro. The timer and stats stay on the device |
 | Accounts | `src/auth/AuthContext.tsx`, `AuthDialog`, `AccountButton`, `pages/AccountPage`, `pages/ResetPasswordPage` | supabase-js is **lazy-loaded**: guests never download it. Email/password and reset. Google button appears only if enabled in Supabase |
 | Sync | `src/sync/` | See §5 |

@@ -11,6 +11,8 @@ export class DemoEngine implements PlaybackEngine {
   private duration = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
   private loadToken = 0;
+  /** autoplay requested by load() but the simulated load hasn't finished; pause() cancels it */
+  private autoplayPending = false;
 
   constructor(private events: EngineEvents) {}
 
@@ -20,6 +22,7 @@ export class DemoEngine implements PlaybackEngine {
     this.base = opts.startAt;
     this.rate = opts.rate;
     this.duration = track.duration;
+    this.autoplayPending = opts.autoplay;
     this.events.onBuffering(true);
     // simulate a short network round-trip so loading/error states are visible
     setTimeout(() => {
@@ -28,8 +31,9 @@ export class DemoEngine implements PlaybackEngine {
       if (track.unavailable) return this.events.onError('Video này không khả dụng.');
       this.events.onDuration(track.duration);
       this.events.onRates(ALL_RATES);
-      if (opts.autoplay) this.play();
+      if (this.autoplayPending) this.play();
       else this.events.onPause();
+      this.autoplayPending = false;
     }, 180);
   }
 
@@ -53,6 +57,7 @@ export class DemoEngine implements PlaybackEngine {
   }
 
   pause(): void {
+    this.autoplayPending = false;
     if (!this.playing) return;
     this.base = this.getCurrentTime();
     this.halt();

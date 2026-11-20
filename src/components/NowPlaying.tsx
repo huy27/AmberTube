@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ChevronDown, SkipBack, SkipForward, Play, Pause, Loader2, Heart, ListMusic, Infinity as InfinityIcon, ThumbsUp, ThumbsDown, Shuffle, Repeat, Repeat1, Music, Search, Mic } from 'lucide-react';
+import { ChevronDown, SkipBack, SkipForward, Play, Pause, Loader2, Heart, ListMusic, Infinity as InfinityIcon, ThumbsUp, ThumbsDown, Shuffle, Repeat, Repeat1, Music, Mic } from 'lucide-react';
 import { openCarVoice } from '../voice/CarVoiceSearch';
 import Artwork from './Artwork';
 import ProgressBar, { useProgress } from './ProgressBar';
@@ -38,11 +38,8 @@ export default function NowPlaying() {
         <button className="cbtn cbtn--ghost" onClick={() => ui.setNowPlaying(false)} aria-label="Quay lại"><ChevronDown size={26} /></button>
         <span className="np__label">Đang phát</span>
         <div className="np__topright">
-          <button className="np__voice" onClick={openCarVoice} aria-label="Tìm bằng giọng nói">
-            <Mic size={22} /><span>Nói tên bài</span>
-          </button>
-          <button className="np__find" onClick={() => { ui.setNowPlaying(false); window.dispatchEvent(new CustomEvent('ambertube:find', { detail: { voice: false } })); }} aria-label="Tìm bài (gõ bằng bàn phím, nhạc vẫn phát)">
-            <Search size={20} /><span>Tìm bài</span>
+          <button className="np__voice" onClick={openCarVoice} aria-label="Tìm bằng giọng nói" title="Tìm bằng giọng nói">
+            <Mic size={22} />
           </button>
           <button className="cbtn cbtn--ghost" onClick={() => { ui.setNowPlaying(false); ui.setPanel('queue'); }} aria-label="Hàng đợi"><ListMusic size={22} /></button>
         </div>

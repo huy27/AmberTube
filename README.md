@@ -294,19 +294,19 @@ Thử điều hướng 400 lần giữa các trang trong khi phát nhạc (`e2e/
 
 ## Tìm bằng giọng nói trong Car View
 
-- Mở bằng **nút mic lớn "Nói"** trên thanh phát của Car View, nút **"Nói tên bài"** trong màn hình Đang phát, hoặc mic trên thanh tìm kiếm.
+- Mở bằng **nút mic lớn** (chỉ có biểu tượng micro) trên thanh phát của Car View, nút micro trong màn hình Đang phát, hoặc mic trên thanh tìm kiếm.
 - Màn hình nghe phủ toàn màn hình, có mic lớn và chữ bạn nói hiện to ngay khi nói. Chạm vào màn hình khi nói xong; nút **Hủy** lớn.
 - **Không bật bàn phím ảo.** Nói xong app tự tìm và hiện kết quả dạng thẻ lớn:
   - Bài khớp nhất được ưu tiên bản chính thức (Topic / Official), xếp trên cover, karaoke, remix trừ khi bạn nói rõ phiên bản đó.
-  - Bài này **tự phát sau 3 giây**; bấm "Không phát" để chọn bài khác.
+  - Không tự phát: chạm vào thẻ bài muốn nghe để phát.
 - Khi không nghe rõ, có lỗi, hoặc khi hủy: hiện nút lớn **"Nói lại"** và **"Tiếp tục nhạc"**.
-- Nhạc dừng khi bắt đầu nghe và **không tự phát lại**, vì liên quan đến đường âm thanh qua CarPlay. "Tiếp tục nhạc" phát lại đúng bài đang nghe.
+- Nhạc tạm dừng khi micro đang nghe. Khi đã có kết quả (micro đã tắt), **bài đang nghe phát tiếp** cho tới khi bạn chạm chọn bài khác. Khi hủy hoặc lỗi, nhạc vẫn dừng; "Tiếp tục nhạc" phát lại đúng bài đang nghe.
 - Trình duyệt không hỗ trợ nhận giọng nói: nút mic chuyển sang ô gõ chữ, nhạc vẫn phát.
 - Giao diện máy tính giữ nguyên cách tìm bằng giọng nói ngay trong thanh tìm kiếm.
 
 ## Tìm kiếm bằng giọng nói và CarPlay
 
-- **Chỉ tìm bằng giọng nói (nút micro) mới tạm dừng nhạc.** Gõ phím để tìm, kể cả nút "Tìm bài" ở màn hình Đang phát, chỉ mở ô gõ: nhạc vẫn phát, không bật micro.
+- **Chỉ tìm bằng giọng nói (nút micro) mới tạm dừng nhạc.** Gõ phím để tìm trên thanh tìm kiếm: nhạc vẫn phát, không bật micro. Màn hình Đang phát chỉ còn nút micro; trình duyệt không hỗ trợ giọng nói thì nút này mở ô gõ chữ.
 - **Trước khi bật micro:** app tạm dừng nhạc. Sau khi tìm xong, nhạc **vẫn dừng** cho tới khi bạn bấm Phát, và Smart Autoplay không tự chuyển bài.
 - **Phiên nhận dạng luôn được đóng hẳn** (`abort()` và gỡ mọi callback) trong các tình huống:
   - đã nghe ra câu tìm;
