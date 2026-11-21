@@ -1,3 +1,4 @@
+import { getQuality, subscribeQuality } from '../videoQuality';
 import { diag } from '../../diag/audioDiag';
 import type { Track } from '../../types';
 import type { EngineEvents, LoadOptions, PlaybackEngine } from './types';
@@ -55,7 +56,21 @@ export class YouTubeEngine implements PlaybackEngine {
   /** the current load has reached PLAYING at least once */
   private started = false;
 
-  constructor(private events: EngineEvents, private getHost: () => HTMLElement | null) {}
+  constructor(private events: EngineEvents, private getHost: () => HTMLElement | null) {
+    subscribeQuality(() => this.applyQuality());
+  }
+
+  /** official (deprecated, best-effort) quality hint; 'auto' = leave it to YouTube */
+  private applyQuality() {
+    const q = getQuality();
+    if (this.ready && this.current && q !== 'auto') {
+      try {
+        this.player!.setPlaybackQuality(q);
+      } catch {
+        /* hint only */
+      }
+    }
+  }
 
   private async ensurePlayer(): Promise<void> {
     if (this.player) return;
@@ -191,6 +206,7 @@ export class YouTubeEngine implements PlaybackEngine {
     this.started = false;
     this.clearSlow();
     const req = { videoId, startSeconds: Math.floor(opts.startAt) || undefined };
+    setTimeout(() => this.applyQuality(), 800);
     if (opts.autoplay) {
       p.loadVideoById(req);
       // if the browser blocks autoplay the player just sits unstarted — report it instead of spinning forever

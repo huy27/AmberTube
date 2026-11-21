@@ -5,6 +5,7 @@ import { useUI } from '../context/UIContext';
 import { useVideoAvailable } from '../hooks/useVideoAvailable';
 import ProgressBar, { useProgress } from './ProgressBar';
 import { TransportControls } from './PlayerBar';
+import VideoExtras from './VideoExtras';
 import { formatTime } from '../services/format';
 
 function FullTime() {
@@ -87,6 +88,7 @@ export default function YouTubeHost() {
         <div className={`video-dock${ui.panel ? ' video-dock--shift' : ''}`} role="region" aria-label="Video đang phát">
           <div className="video-dock__bar">
             <span className="video-dock__title" title={p.track?.title}>{p.track?.title}</span>
+            <VideoExtras />
             <button className="icon-btn icon-btn--sm" onClick={() => void enterFull()} aria-label="Toàn màn hình" title="Toàn màn hình (bấm đúp vào video)"><Maximize size={15} /></button>
             <button className="icon-btn icon-btn--sm" onClick={() => ui.toggleVideo(false)} aria-label="Ẩn video" title="Ẩn video (V)"><X size={16} /></button>
           </div>
@@ -109,6 +111,7 @@ export default function YouTubeHost() {
             <div className="video-full__progress"><ProgressBar variant="inline" /><FullTime /></div>
             <div className="video-full__row">
               <TransportControls size="large" />
+              <div className="video-full__extras"><VideoExtras align="center" /></div>
               <button className="icon-btn video-full__exit" onClick={exitFull} aria-label="Thoát toàn màn hình" title="Thoát toàn màn hình (Esc)"><Minimize size={22} /></button>
             </div>
           </div>
