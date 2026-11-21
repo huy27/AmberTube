@@ -4,7 +4,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const MIGRATIONS = ['0001_init.sql', '0002_limits.sql'].map((f) => fileURLToPath(new URL(`../migrations/${f}`, import.meta.url)));
+const MIGRATIONS = ['0001_init.sql', '0002_limits.sql', '0003_api_usage.sql'].map((f) => fileURLToPath(new URL(`../migrations/${f}`, import.meta.url)));
 
 const SUPABASE_STUB = `
   create schema if not exists auth;

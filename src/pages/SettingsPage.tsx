@@ -1,9 +1,11 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useToast } from '../context/ToastContext';
 import { hasYouTubeApi } from '../services/youtube';
+import { DAILY_QUOTA, fetchQuotaHistory, quotaDay, type QuotaDay } from '../services/quota';
+import { hasSupabase } from '../services/supabase';
 import { hasConversionBackend, authorizedChannelCount } from '../services/downloads';
 import { hasLyricsProvider } from '../services/lyrics';
 import { SHORTCUTS } from '../hooks/useKeyboardShortcuts';
@@ -15,6 +17,52 @@ import { useSearchHistory } from '../search/SearchHistoryContext';
 import { useListeningStore } from '../recommend/ListeningStore';
 import AutoplayControls from '../components/AutoplayControls';
 import { useRecommendations } from '../recommend/RecommendationProvider';
+
+const QUOTA_CONSOLE = 'https://console.cloud.google.com/apis/api/youtube.googleapis.com/quotas?project=ambertube-515316';
+
+function QuotaPanel() {
+  const [rows, setRows] = useState<QuotaDay[] | null>(null);
+  const [err, setErr] = useState('');
+  const load = useCallback(() => {
+    setErr('');
+    fetchQuotaHistory(7).then(setRows).catch((e: Error) => setErr(e.message));
+  }, []);
+  useEffect(load, [load]);
+  const fmt = (n: number) => n.toLocaleString('vi-VN');
+  const today = rows?.find((r) => r.day === quotaDay());
+  const units = today?.units ?? 0;
+  const pct = Math.min(100, Math.round((units / DAILY_QUOTA) * 100));
+  return (
+    <div className="panel account-usage">
+      {!hasSupabase ? (
+        <p className="usage-note">Cần cấu hình Supabase (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) để đếm quota dùng chung giữa các thiết bị.</p>
+      ) : err ? (
+        <p className="usage-note">{err} <button className="btn btn--sm btn--outline" onClick={load}>Thử lại</button></p>
+      ) : !rows ? (
+        <p className="usage-note">Đang tải…</p>
+      ) : (
+        <>
+          <div className={`usage-row${pct >= 90 ? ' is-full' : ''}`}>
+            <span className="usage-row__label">Hôm nay</span>
+            <span className="usage-row__bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></span>
+            <span className="usage-row__num">{fmt(units)} / {fmt(DAILY_QUOTA)}</span>
+          </div>
+          <p className="usage-note">
+            Tìm kiếm: {fmt(today?.search ?? 0)} lần (100 đơn vị/lần) · Chi tiết video: {fmt(today?.videos ?? 0)} · Kênh: {fmt(today?.channels ?? 0)} (1 đơn vị/lần).
+          </p>
+          {rows.some((r) => r.day !== quotaDay()) && (
+            <p className="usage-note">Những ngày trước: {rows.filter((r) => r.day !== quotaDay()).map((r) => `${r.day.slice(5)}: ${fmt(r.units)}`).join(' · ')}</p>
+          )}
+          <p className="usage-note"><button className="btn btn--sm btn--outline" onClick={load}>Làm mới</button></p>
+        </>
+      )}
+      <p className="usage-note">
+        Tổng hợp từ mọi thiết bị dùng AmberTube; chỉ là <strong>ước tính</strong> (có thể chậm vài chục giây). Hạn mức đặt lại lúc 0h giờ Thái Bình Dương (khoảng 14h giờ Việt Nam).{' '}
+        <a href={QUOTA_CONSOLE} target="_blank" rel="noopener noreferrer">Xem số liệu thật trong Google Cloud Console</a>
+      </p>
+    </div>
+  );
+}
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange(v: boolean): void; label: string }) {
   return (
@@ -191,6 +239,13 @@ export default function SettingsPage() {
           <Status ok={hasConversionBackend} off="Chỉ bài demo" />
         </Row>
       </div>
+
+      {hasYouTubeApi && (
+        <>
+          <h2 className="section-title">Hạn mức YouTube API (ước tính)</h2>
+          <QuotaPanel />
+        </>
+      )}
 
       <h2 className="section-title">Dữ liệu</h2>
       <div className="panel">

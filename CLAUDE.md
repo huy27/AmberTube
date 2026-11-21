@@ -165,7 +165,11 @@ Files:
 - `supabase/migrations/0001_init.sql`: 7 tables, RLS, triggers, Realtime publication.
 - `supabase/migrations/0002_limits.sql`: plan-B per-user limits, rolling trims, `ambertube_my_usage()`, a daily
   `pg_cron` job `ambertube-cleanup`.
-- Paste-safe copies (no indentation, no comments): `supabase/ambertube_supabase_setup.sql` and `…_limits.sql`.
+- `supabase/migrations/0003_api_usage.sql`: shared YouTube quota counter (table `api_usage` closed to the API; RPCs
+  `ambertube_record_api_usage` / `ambertube_api_usage`, callable with the anon key, so the figures are an estimate).
+  The app (`src/services/quota.ts`) buffers calls in memory and flushes via plain `fetch`; Settings shows it. Not run on the
+  owner's project yet: ask.
+- Paste-safe copies (no indentation, no comments): `supabase/ambertube_supabase_setup.sql`, `…_limits.sql`, `…_usage.sql`.
 
 **Gotcha:** copying SQL from a chat or file preview turned leading spaces into NBSP. Postgres then threw
 `syntax error` at indented lines. Have the owner download the file and copy it from an editor, or use the

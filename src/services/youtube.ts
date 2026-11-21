@@ -1,3 +1,4 @@
+import { recordQuota, type QuotaKind } from './quota';
 import type { Track } from '../types';
 import { decodeEntities, parseIsoDuration, parseYouTubeId } from './format';
 import { searchDemo, DEMO_TRACKS } from '../data/demoCatalog';
@@ -6,6 +7,12 @@ import { genresOf } from '../recommend/style';
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const API = 'https://www.googleapis.com/youtube/v3';
+
+/** every YouTube Data API call goes through here so the quota estimate stays accurate */
+function ytFetch(kind: QuotaKind, params: URLSearchParams, signal?: AbortSignal): Promise<Response> {
+  recordQuota(kind);
+  return fetch(`${API}/${kind}?${params}`, { signal });
+}
 
 export const hasYouTubeApi = Boolean(API_KEY);
 export const PASTED_CHANNEL = 'Link đã dán';
@@ -75,7 +82,7 @@ export function trackFromVideoId(videoId: string): Track {
 
 async function fetchVideos(ids: string[], signal?: AbortSignal): Promise<Track[]> {
   const params = new URLSearchParams({ part: 'snippet,contentDetails,statistics,status', id: ids.join(','), key: API_KEY! });
-  const res = await fetch(`${API}/videos?${params}`, { signal });
+  const res = await ytFetch('videos', params, signal);
   if (!res.ok) throw new Error(`Lỗi YouTube API (${res.status})`);
   const data: { items?: VideoResource[] } = await res.json();
   const byId = new Map((data.items || []).map((v) => [v.id, fromVideoResource(v)]));
@@ -158,7 +165,7 @@ export async function getTrending(): Promise<{ items: Track[]; source: 'youtube'
     /* ignore */
   }
   const params = new URLSearchParams({ part: 'snippet,contentDetails,statistics,status', chart: 'mostPopular', videoCategoryId: '10', regionCode: 'VN', maxResults: '12', key: API_KEY });
-  const res = await fetch(`${API}/videos?${params}`);
+  const res = await ytFetch('videos', params);
   if (!res.ok) throw new Error(`Lỗi YouTube API (${res.status})`);
   const data: { items?: VideoResource[] } = await res.json();
   const items = (data.items || []).map(fromVideoResource);
@@ -200,7 +207,7 @@ async function searchUncached(query: string, opts: { pageToken?: string | null; 
   const params = new URLSearchParams({ part: 'snippet', type: 'video', videoEmbeddable: 'true', maxResults: '15', q: query, key: API_KEY });
   if (pageToken) params.set('pageToken', pageToken);
   if (opts.music) params.set('videoCategoryId', '10');
-  const res = await fetch(`${API}/search?${params}`, { signal });
+  const res = await ytFetch('search', params, signal);
   if (!res.ok) throw new Error(`Lỗi YouTube API (${res.status})`);
   const data: { items?: { id?: { videoId?: string } }[]; nextPageToken?: string } = await res.json();
   const ids = (data.items || []).map((i) => i.id?.videoId).filter((x): x is string => Boolean(x));
@@ -212,7 +219,7 @@ async function searchUncached(query: string, opts: { pageToken?: string | null; 
 export async function getChannelThumbnails(ids: string[]): Promise<Record<string, string>> {
   if (!API_KEY || !ids.length) return {};
   const params = new URLSearchParams({ part: 'snippet', id: ids.slice(0, 50).join(','), key: API_KEY });
-  const res = await fetch(`${API}/channels?${params}`);
+  const res = await ytFetch('channels', params);
   if (!res.ok) throw new Error(`Lỗi YouTube API (${res.status})`);
   const data: { items?: { id: string; snippet?: { thumbnails?: Record<string, { url?: string }> } }[] } = await res.json();
   const out: Record<string, string> = {};
