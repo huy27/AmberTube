@@ -986,7 +986,7 @@ kbd {
 .artist-hero__credit:hover { color: var(--accent); }
 .reco-card--square .reco-card__thumb { aspect-ratio: 1; }
 
-/* video extras (seek ±10 s, quality) */
+/* video extras (seek ±10 s) */
 .video-x:disabled { opacity: 0.4; }
 .video-full__extras { position: absolute; left: 0; display: flex; align-items: center; gap: 4px; color: #fff; }
-html.layout-compact .video-x, html.layout-compact .video-q .popover__btn, html.layout-compact .video-q > button { min-width: 48px; min-height: 48px; }
+html.layout-compact .video-x { min-width: 48px; min-height: 48px; }

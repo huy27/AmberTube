@@ -111,7 +111,7 @@ export default function YouTubeHost() {
             <div className="video-full__progress"><ProgressBar variant="inline" /><FullTime /></div>
             <div className="video-full__row">
               <TransportControls size="large" />
-              <div className="video-full__extras"><VideoExtras align="center" /></div>
+              <div className="video-full__extras"><VideoExtras /></div>
               <button className="icon-btn video-full__exit" onClick={exitFull} aria-label="Thoát toàn màn hình" title="Thoát toàn màn hình (Esc)"><Minimize size={22} /></button>
             </div>
           </div>

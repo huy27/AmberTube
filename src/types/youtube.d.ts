@@ -30,7 +30,6 @@ declare namespace YT {
     mute(): void;
     unMute(): void;
     setPlaybackRate(rate: number): void;
-    setPlaybackQuality(quality: string): void;
     getPlaybackRate(): number;
     getAvailablePlaybackRates(): number[];
     getVideoData(): VideoData;
