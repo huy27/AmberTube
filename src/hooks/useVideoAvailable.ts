@@ -1,11 +1,9 @@
 import { useLocation } from 'react-router-dom';
 import { usePlayer } from '../context/PlayerContext';
-import { useDisplayMode } from '../context/DisplayModeContext';
 
-/** The video can be shown on the desktop layout only (never in Car View: no video while driving). */
+/** The video can be shown on desktop and (owner's request, 2026-11-21) in Car View, always opt-in via the toggle. */
 export function useVideoAvailable() {
   const { track } = usePlayer();
-  const { compact } = useDisplayMode();
   const { pathname } = useLocation();
-  return !compact && pathname !== '/focus' && track?.provider === 'youtube';
+  return pathname !== '/focus' && track?.provider === 'youtube';
 }

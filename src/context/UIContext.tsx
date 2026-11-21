@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useDisplayMode } from './DisplayModeContext';
 
 export type SidePanel = 'queue' | 'lyrics' | null;
 
@@ -33,7 +34,9 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const [panel, setPanel] = useState<SidePanel>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [nowPlaying, setNowPlaying] = useState(false);
-  const [video, setVideo] = useState(readVideo);
+  const { compact } = useDisplayMode();
+  // Car View / compact: the video never starts open (opt-in each time)
+  const [video, setVideo] = useState(() => (compact ? { open: false } : readVideo()));
   useEffect(() => {
     try {
       localStorage.setItem(VIDEO_KEY, JSON.stringify(video));
@@ -41,6 +44,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
   }, [video]);
+  useEffect(() => { if (compact) setVideo((v) => (v.open ? { ...v, open: false } : v)); }, [compact]);
   const toggleVideo = useCallback((on?: boolean) => setVideo((v) => ({ ...v, open: on ?? !v.open })), []);
 
   useEffect(() => {

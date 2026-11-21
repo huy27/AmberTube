@@ -35,8 +35,10 @@ The owner writes in **Vietnamese**. Reply in Vietnamese, concisely. Keep all UI 
 - No silent-audio or keep-alive hacks.
 - No extracting or proxying YouTube streams, no DRM bypass, no unofficial YouTube endpoints, no bypassing
   corporate firewalls.
-- Video is shown only on desktop: a small window above the player bar, plus full screen.
-- **Never show video in Car View** (driving safety).
+- Video: desktop shows a small window above the player bar, plus full screen. Car View also can show it (owner's
+  request, 2026-11-21): **opt-in only**, off by default, toggled by the video button in Now Playing or the "⋯" menu;
+  big centered panel with ≥ 44 px buttons (`car.css`, `html.layout-compact`). Chưa thử trên máy thật (VF5/CarPlay).
+  Safety note: the owner chose this knowingly; never auto-open it in Car View.
 
 ### Honesty
 - Never claim results from physical devices (iPhone, CarPlay, VF5) that were not actually tested. Say "chưa

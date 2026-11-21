@@ -410,3 +410,17 @@ html.mode-car .np { animation: none; }
 .cvoice__results .cvoice__actions { justify-content: flex-start; }
 @media (max-width: 560px) { .cvoice__more { grid-template-columns: 1fr; } .cvoice__results { padding-right: 0; padding-top: 48px; } }
 @media (prefers-reduced-motion: reduce) { .cvoice__mic i { animation: none; opacity: 0; } }
+
+/* ===== Video in Car View / compact (opt-in via the video button; owner's request 2026-11-21) ===== */
+html.layout-compact .yt-host--visible, html.layout-compact .video-dock {
+  --vd-w: min(88vw, calc((100vh - var(--car-player-h) - 96px) * 16 / 9));
+  --vd-bar: 52px; --vd-bottom: calc(var(--car-player-h) + 16px);
+}
+html.layout-compact .yt-host--visible, html.layout-compact .video-dock { left: 50%; right: auto; transform: translateX(-50%); }
+html.layout-compact .yt-host--visible { z-index: 95; }
+html.layout-compact .video-dock { z-index: 96; }
+html.layout-compact .video-dock__title { font-size: 15px; }
+html.layout-compact .video-dock__bar .icon-btn { width: 48px; height: 48px; }
+html.mode-car .video-dock { animation: none; }
+.np__video.is-on { color: var(--accent); }
+.np__video { min-width: 44px; min-height: 44px; }

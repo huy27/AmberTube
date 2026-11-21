@@ -90,7 +90,7 @@ export function useKeyboardShortcuts(): void {
       } else if (key === 'q' || key === 'Q') {
         u.togglePanel('queue');
       } else if (key === 'v' || key === 'V') {
-        if (p.track?.provider !== 'youtube' || document.querySelector('.app--compact')) return;
+        if (p.track?.provider !== 'youtube') return;
         u.toggleVideo();
       } else if (key === 'f' || key === 'F') {
         openFocus();

@@ -94,14 +94,20 @@ const resource = ([id, title, ch, dur]) => ({ id, snippet: { title, channelTitle
     check('no page errors', errs.length === 0, errs.join(' | '));
     await ctx.close();
   }
-  // ---- Car View: never shows video
+  // ---- Car View: video is opt-in (off by default), toggled from Now Playing, fits the screen, touch targets >= 44px
   {
     const { ctx, p } = await page({ width: 800, height: 480 }, 'car');
-    await p.goto(URL0 + '/'); await p.evaluate(() => localStorage.setItem('ambertube:video', JSON.stringify({ open: true, large: false })));
     await p.goto(URL0 + '/search?q=den'); await p.waitForSelector('.video-row');
     await p.click('.video-row >> nth=0'); await p.waitForTimeout(500);
-    await p.keyboard.press('v'); await p.waitForTimeout(200);
-    check('Car View: no video even if it was left on (safety), V does nothing', !(await host(p)).vis && !(await p.$('.video-dock')) && !(await p.$('.player__video')));
+    check('Car View: video hidden by default', !(await host(p)).vis && !(await p.$('.video-dock')));
+    await p.click('.cplayer__now'); await p.waitForSelector('.np__video');
+    await p.click('.np__video'); await p.waitForTimeout(300);
+    const h = await host(p);
+    check('Car View: video shows above Now Playing, inside the screen', h.vis && h.x >= 0 && h.r <= 800 && h.y >= 0 && h.b <= 480, JSON.stringify(h));
+    const btn = await p.$eval('.video-dock__bar .icon-btn', (e) => { const r = e.getBoundingClientRect(); return Math.min(r.width, r.height); });
+    check('Car View: video dock buttons >= 44px', btn >= 44, String(btn));
+    await p.click('.np__video'); await p.waitForTimeout(200);
+    check('Car View: video can be hidden again', !(await host(p)).vis);
     await ctx.close();
   }
   // ---- small desktop window: still fits

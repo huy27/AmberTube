@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ChevronDown, SkipBack, SkipForward, Play, Pause, Loader2, Heart, ListMusic, Infinity as InfinityIcon, ThumbsUp, ThumbsDown, Shuffle, Repeat, Repeat1, Music, Mic } from 'lucide-react';
+import { ChevronDown, SkipBack, SkipForward, Play, Pause, Loader2, Heart, ListMusic, Infinity as InfinityIcon, ThumbsUp, ThumbsDown, Shuffle, Repeat, Repeat1, Music, Mic, MonitorPlay } from 'lucide-react';
 import { openCarVoice } from '../voice/CarVoiceSearch';
 import Artwork from './Artwork';
 import ProgressBar, { useProgress } from './ProgressBar';
@@ -7,6 +7,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useUI } from '../context/UIContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useRecommendations } from '../recommend/RecommendationProvider';
+import { useVideoAvailable } from '../hooks/useVideoAvailable';
 import { formatTime } from '../services/format';
 
 /** Car View "Now Playing": artwork, track, progress and large controls — no scrolling needed. */
@@ -17,6 +18,7 @@ export default function NowPlaying() {
   const { autoplay, setAutoplay, moreLikeThis, lessLikeThis } = useRecommendations();
   const { time, dur } = useProgress();
   const root = useRef<HTMLDivElement>(null);
+  const videoOk = useVideoAvailable();
   const open = ui.nowPlaying && Boolean(p.track);
 
   useEffect(() => {
@@ -38,6 +40,8 @@ export default function NowPlaying() {
         <button className="cbtn cbtn--ghost" onClick={() => ui.setNowPlaying(false)} aria-label="Quay lại"><ChevronDown size={26} /></button>
         <span className="np__label">Đang phát</span>
         <div className="np__topright">
+          <button className={`cbtn cbtn--ghost np__video${videoOk && ui.videoOpen ? ' is-on' : ''}`} onClick={() => ui.toggleVideo()} disabled={!videoOk} aria-pressed={videoOk && ui.videoOpen}
+            aria-label={!videoOk ? 'Bài này không có video' : ui.videoOpen ? 'Ẩn video' : 'Xem video'} title="Video"><MonitorPlay size={22} /></button>
           <button className="np__voice" onClick={openCarVoice} aria-label="Tìm bằng giọng nói" title="Tìm bằng giọng nói">
             <Mic size={22} />
           </button>
